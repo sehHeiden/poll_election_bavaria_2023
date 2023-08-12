@@ -24,10 +24,10 @@ VegaLite.new(width: 500, height: 300, title: "CSU - polls")
 |> VegaLite.encode_field(:color, "institute", type: :nominal)
 ```
 
-<!-- livebook:{"attrs":{"chart_title":"Gruene","height":300,"layers":[{"active":true,"chart_type":"point","color_field":"institute","color_field_aggregate":null,"color_field_bin":null,"color_field_scale_scheme":null,"color_field_type":"nominal","data_variable":"pools","geodata_color":"blue","latitude_field":null,"longitude_field":null,"x_field":"end_date","x_field_aggregate":null,"x_field_bin":null,"x_field_scale_type":null,"x_field_type":"temporal","y_field":"gruene","y_field_aggregate":null,"y_field_bin":null,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":500},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+<!-- livebook:{"attrs":{"chart_title":"Gruene - polls","height":300,"layers":[{"active":true,"chart_type":"point","color_field":"institute","color_field_aggregate":null,"color_field_bin":null,"color_field_scale_scheme":null,"color_field_type":"nominal","data_variable":"pools","geodata_color":"blue","latitude_field":null,"longitude_field":null,"x_field":"end_date","x_field_aggregate":null,"x_field_bin":null,"x_field_scale_type":null,"x_field_type":"temporal","y_field":"gruene","y_field_aggregate":null,"y_field_bin":null,"y_field_scale_type":null,"y_field_type":"quantitative"}],"vl_alias":"Elixir.VegaLite","width":500},"chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
 
 ```elixir
-VegaLite.new(width: 500, height: 300, title: "Gruene")
+VegaLite.new(width: 500, height: 300, title: "Gruene - polls")
 |> VegaLite.data_from_values(pools, only: ["end_date", "gruene", "institute"])
 |> VegaLite.mark(:point)
 |> VegaLite.encode_field(:x, "end_date", type: :temporal)

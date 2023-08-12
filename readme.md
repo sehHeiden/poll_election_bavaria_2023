@@ -67,7 +67,7 @@ While its coalition partner increases by a similar perentage.
 
 The most polular oppostion parties show a trend of loosing lefts and gaining ultra right.
 
-![](./graphics/visualization_grune_polls.svg)
+![](./graphics/visualization_gruene_polls.svg)
 ![](./graphics/visualization_afd_polls.svg)
 
 ## Linklist
