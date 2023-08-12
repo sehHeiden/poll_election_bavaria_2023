@@ -1,0 +1,13 @@
+# Untitled notebook
+
+```elixir
+Mix.install([
+  {:explorer, "~> 0.6.1"}
+])
+```
+
+## Section
+
+```elixir
+pools = Explorer.DataFrame.from_csv!("polls.csv")
+```
