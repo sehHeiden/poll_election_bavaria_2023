@@ -35,8 +35,8 @@ VegaLite.new(width: 500, height: 300, title: "Gruene - polls")
 VegaLite.new(width: 500, height: 300, title: "Freie Waehler - polls")
 |> VegaLite.data_from_values(pools, only: ["end_date", "fw", "institute"])
 |> VegaLite.mark(:point)
-|> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "percentage")
-|> VegaLite.encode_field(:y, "fw", type: :quantitative, title: "end date")
+|> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "end date")
+|> VegaLite.encode_field(:y, "fw", type: :quantitative, title: "percentage")
 |> VegaLite.encode_field(:color, "institute", type: :nominal)
 ```
 
