@@ -58,13 +58,17 @@ Source: [Landtagswahl in Bayern 2023: Kandidaten, Themen, Termin | BR24](https:/
 
 
 The strongest party loses percentages in the last year.
-![](/home/sebastianh/Dokumente/Basti/Studium/HSHarz/Praxisprojekt/poll_election_bavaria_2023/graphics/visualization_csu_polls.svg)
+
+![](./graphics/visualization_csu_polls.svg)
+
 While its coalition partner increases by a similar perentage.
-![](/home/sebastianh/Dokumente/Basti/Studium/HSHarz/Praxisprojekt/poll_election_bavaria_2023/graphics/visualization_fw_polls.svg)
+
+![](./graphics/visualization_fw_polls.svg)
 
 The most polular oppostion parties show a trend of loosing lefts and gaining ultra right.
-![](/home/sebastianh/Dokumente/Basti/Studium/HSHarz/Praxisprojekt/poll_election_bavaria_2023/graphics/visualization_grune_polls.svg)
-![](/home/sebastianh/Dokumente/Basti/Studium/HSHarz/Praxisprojekt/poll_election_bavaria_2023/graphics/visualization_afd_polls.svg)
+
+![](./graphics/visualization_grune_polls.svg)
+![](./graphics/visualization_afd_polls.svg)
 
 ## Linklist
 
