@@ -1,50 +1,121 @@
-# Untitled notebook
+# Bavarian Election
 
 ```elixir
 Mix.install([
   {:explorer, "~> 0.6.1"},
-  {:kino_vega_lite, "~> 0.1.7"}
+  {:kino_vega_lite, "~> 0.1.7"},
+  {:jason, "~> 1.4"},
+  {:ueberauth, "~> 0.7.0"},
+  {:hackney, "~> 1.18"},
+  {:ueberauth_mastodon, "~> 0.2.1"}
 ])
 ```
 
-## Section
+## Polls
 
 ```elixir
 pools = Explorer.DataFrame.from_csv!("polls.csv")
 ```
 
 ```elixir
-VegaLite.new(width: 500, height: 300, title: "CSU - polls")
+VegaLite.new(width: 500, height: 300, title: "Polls - CSU")
 |> VegaLite.data_from_values(pools, only: ["end_date", "csu", "institute"])
-|> VegaLite.mark(:point)
-|> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "end date")
-|> VegaLite.encode_field(:y, "csu", type: :quantitative, title: "percentage")
-|> VegaLite.encode_field(:color, "institute", type: :nominal)
+|> VegaLite.layers([
+  VegaLite.new()
+  |> VegaLite.mark(:point)
+  |> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
+  |> VegaLite.encode_field(:y, "csu", type: :quantitative, title: "percentage")
+  |> VegaLite.encode_field(:color, "institute", type: :nominal),
+  VegaLite.new()
+  |> VegaLite.mark(:line, color: "firebrick", opacity: 0.5)
+  |> VegaLite.transform(regression: "csu", on: "end_date")
+  |> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
+  |> VegaLite.encode_field(:y, "csu", type: :quantitative, title: "percentage")
+])
 ```
 
 ```elixir
-VegaLite.new(width: 500, height: 300, title: "Gruene - polls")
+VegaLite.new(width: 500, height: 300, title: "Pools - Buendnis-Gruene")
 |> VegaLite.data_from_values(pools, only: ["end_date", "gruene", "institute"])
-|> VegaLite.mark(:point)
-|> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "end date")
-|> VegaLite.encode_field(:y, "gruene", type: :quantitative, title: "percentage")
-|> VegaLite.encode_field(:color, "institute", type: :nominal)
+|> VegaLite.layers([
+  VegaLite.new()
+  |> VegaLite.mark(:point)
+  |> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
+  |> VegaLite.encode_field(:y, "gruene", type: :quantitative, title: "percentage")
+  |> VegaLite.encode_field(:color, "institute", type: :nominal),
+  VegaLite.new()
+  |> VegaLite.mark(:line, color: "firebrick", opacity: 0.5)
+  |> VegaLite.transform(regression: "gruene", on: "end_date")
+  |> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
+  |> VegaLite.encode_field(:y, "gruene", type: :quantitative, title: "percentage")
+])
 ```
 
 ```elixir
-VegaLite.new(width: 500, height: 300, title: "Freie Waehler - polls")
+VegaLite.new(width: 500, height: 300, title: "Polls - Freie Waehler")
 |> VegaLite.data_from_values(pools, only: ["end_date", "fw", "institute"])
-|> VegaLite.mark(:point)
-|> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "end date")
-|> VegaLite.encode_field(:y, "fw", type: :quantitative, title: "percentage")
-|> VegaLite.encode_field(:color, "institute", type: :nominal)
+|> VegaLite.layers([
+  VegaLite.new()
+  |> VegaLite.mark(:point)
+  |> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
+  |> VegaLite.encode_field(:y, "fw", type: :quantitative, title: "percentage")
+  |> VegaLite.encode_field(:color, "institute", type: :nominal),
+  VegaLite.new()
+  |> VegaLite.mark(:line, color: "firebrick", opacity: 0.5)
+  |> VegaLite.transform(regression: "fw", on: "end_date")
+  |> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
+  |> VegaLite.encode_field(:y, "fw", type: :quantitative, title: "percentage")
+])
 ```
 
 ```elixir
 VegaLite.new(width: 500, height: 300, title: "AFD - polls")
 |> VegaLite.data_from_values(pools, only: ["end_date", "afd", "institute"])
-|> VegaLite.mark(:point)
-|> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "end date")
-|> VegaLite.encode_field(:y, "afd", type: :quantitative, title: "percentage")
-|> VegaLite.encode_field(:color, "institute", type: :nominal)
+|> VegaLite.layers([
+  VegaLite.new()
+  |> VegaLite.mark(:point)
+  |> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
+  |> VegaLite.encode_field(:y, "afd", type: :quantitative, title: "percentage")
+  |> VegaLite.encode_field(:color, "institute", type: :nominal),
+  VegaLite.new()
+  |> VegaLite.mark(:line, color: "firebrick", opacity: 0.5)
+  |> VegaLite.transform(regression: "afd", on: "end_date")
+  |> VegaLite.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
+  |> VegaLite.encode_field(:y, "afd", type: :quantitative, title: "percentage")
+])
+```
+
+## Mastodon
+
+Read mastodon toots/posts and save it into a database.
+
+```elixir
+config :tesla, adapter: Tesla.Adapter.Hackney
+```
+
+```elixir
+{:ok, json} = File.read("secrets.json")
+json = Jason.decode!(json)
+```
+
+```elixir
+conn = %MastodonClient.Conn{
+  instance: "https://chaos.social",
+  client_id: json["client_id"],
+  client_secret: json["client_secret"]
+}
+```
+
+```elixir
+gleasonator:
+      {Ueberauth.Strategy.Mastodon,
+       [
+         # You MUST provide an instance.
+         instance: "https://chaos.social",
+         # You MUST provide app credentials.
+         # Generate your app before getting started.
+         client_id: json["client_id"],
+         client_secret: json["client_secret"]
+         scope: "read"
+       ]}
 ```
