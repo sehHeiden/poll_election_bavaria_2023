@@ -10,7 +10,5 @@ defmodule Mastodon.Repo.Migrations.CreateUser do
       add(:user_id, :string, null: false)
       add(:note, :string)
     end
-
-    create(unique_index(:users, [:user_name]))
   end
 end

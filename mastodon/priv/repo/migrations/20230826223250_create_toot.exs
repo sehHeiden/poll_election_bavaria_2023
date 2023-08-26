@@ -5,7 +5,7 @@ defmodule Mastodon.Repo.Migrations.CreateToot do
       add(:user_name, :string, null: false)
       add(:toot_id, :string, null: false, primary_key: true)
       add(:content, :string)
-      add(:date, :date)
+      add(:date, :utc_datetime)
       add(:language, :string, default: "de")
     end
 
