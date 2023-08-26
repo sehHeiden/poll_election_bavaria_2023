@@ -5,14 +5,15 @@ Mix.install(
   [
     {:explorer, "~> 0.6.1"},
     {:kino_vega_lite, "~> 0.1.7"},
-    {:jason, "~> 1.4"},
-    {:httpoison, "~>1.8"},
-    {:kino_db, "~> 0.2.1"},
-    {:exqlite, "~> 0.11.0"},
+    {:httpoison, "~> 1.8"},
     {:kino_bumblebee, "~> 0.3.0"},
-    {:exla, "~> 0.5.1"}
+    {:exla, "~> 0.5.1"},
+    {:ecto_sqlite3, "~> 0.10"},
+    {:kino_db, "~> 0.2.1"}
   ],
-  config: [nx: [default_backend: EXLA.Backend]]
+  config: [
+    nx: [default_backend: EXLA.Backend]
+  ]
 )
 ```
 
@@ -88,22 +89,38 @@ VegaLite.new(width: 500, height: 300, title: "Linke - polls")
 ])
 ```
 
-## Mastodon
+## Party
+
+```elixir
+parties_df =
+  Explorer.DataFrame.new(
+    party: ["csu", "fw", "spd", "gruene", "fdp", "afd", "linke"],
+    candiate1: [
+      "Markus Söder",
+      "Hubert Aiwanger",
+      "Florian von Brunn",
+      "Ludwig Hartmann",
+      "Martin Hagen",
+      "Katrin Ebner-Steiner",
+      "Adelheid Rupp"
+    ],
+    candidate2: [nil, nil, nil, "Katharina Schulze", nil, "Martin Böhm", nil]
+  )
+
+Explorer.DataFrame.table(parties_df)
+```
+
+## Fetch Mastodon Tags
 
 Read mastodon toots/posts and save it into a database.
 
 ```elixir
 topics =
-  ~w[spd csu  gruene  grune gruenen grunen afd freiewaehler freiewahler fw fpd linke soeder soder aiwanger]
+  ~w[bayern bayernwahl bayernwahl2023 wahlen wahlkampf wahlumfrage wahlen23 wahlen2023 spd csu  gruene  grune gruenen grunen afd freiewaehler freiewahler fw fpd linke soeder soder aiwanger]
 ```
 
 ```elixir
-{:ok, json} = File.read("secrets.json")
-json = Jason.decode!(json)
-```
-
-```elixir
-defmodule Mastodon.Tag do
+defmodule Mastodon.RequestByTag do
   def query(tag) do
     response = HTTPoison.get!("https://chaos.social/api/v1/timelines/tag/#{tag}")
     Jason.decode!(response.body)
@@ -112,64 +129,245 @@ end
 ```
 
 ```elixir
-posts = Mastodon.Tag.query("afd")
+posts =
+  topics
+  |> Enum.map(fn q -> Mastodon.RequestByTag.query(q) end)
+  |> List.flatten()
 ```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
 toot_data =
   Enum.map(posts, fn post ->
     %{
-      username: post["account"]["acct"],
+      user_name: post["account"]["acct"],
       id: post["id"],
       content: post["content"],
-      date: post["created_at"]
+      date: post["created_at"],
+      language: post["language"]
     }
   end)
 ```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
 user_data =
   Enum.map(posts, fn post ->
     %{
-      name: post["account"]["acct"],
+      user_name: post["account"]["acct"],
       followers: post["account"]["followers_count"],
       following: post["account"]["following_count"],
-      avatar: post["account"]["avatar"]
+      avatar: post["account"]["avatar"],
+      user_id: post["account"]["id"],
+      note: post["account"]["note"]
     }
   end)
 ```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
 fields_data =
   Enum.map(posts, fn post ->
-    user = post["account"]["acct"]
+    fields = post["account"]["fields"]
 
-    field1 = post["account"]["fields"] |> Enum.at(0)
-    field2 = post["account"]["fields"] |> Enum.at(1)
-    field3 = post["account"]["fields"] |> Enum.at(2)
-
-    %{
-      "user" => user,
-      "field1_name" => if(field1, do: field1["name"], else: nil),
-      "field1_value" => if(field1, do: field1["value"], else: nil),
-      "field2_name" => if(field2, do: field2["name"], else: nil),
-      "field2_value" => if(field2, do: field2["value"], else: nil),
-      "field3_name" => if(field3, do: field3["name"], else: nil),
-      "field3_value" => if(field3, do: field3["value"], else: nil)
-    }
+    Enum.map(fields, fn field ->
+      %{
+        user_name: post["account"]["user"],
+        field_name: field["name"],
+        field_value: field["value"]
+      }
+    end)
   end)
+  |> List.flatten()
 ```
 
+<!-- livebook:{"reevaluate_automatically":true} -->
+
 ```elixir
-val = Enum.at(Enum.at(posts, 3)["account"]["fields"], 0)
-if val, do: val["name"], else: nil
+tag_data =
+  Enum.map(posts, fn post ->
+    tags = post["tags"]
+
+    Enum.map(tags, fn tag ->
+      tootid = post["id"]
+
+      %{
+        "tootid" => tootid,
+        "tag" => if(tag, do: tag["name"], else: nil)
+      }
+    end)
+  end)
+  |> List.flatten()
 ```
 
-<!-- livebook:{"attrs":{"database_path":".baviarian_election_2023_mastodon.sqlitedb","type":"sqlite","variable":"conn"},"chunks":null,"kind":"Elixir.KinoDB.ConnectionCell","livebook_object":"smart_cell"} -->
+## Database setup
+
+<!-- livebook:{"continue_on_error":true} -->
 
 ```elixir
-opts = [database: ".baviarian_election_2023_mastodon.sqlitedb"]
+config = %{
+  type: :sqlite,
+  database: "baviarian_election_2023_mastodon.sqlitedb"
+}
+```
+
+<!-- livebook:{"attrs":{"database_path":"baviarian_election_2023_mastodon.sqlitedb","type":"sqlite","variable":"conn"},"chunks":null,"kind":"Elixir.KinoDB.ConnectionCell","livebook_object":"smart_cell"} -->
+
+```elixir
+opts = [database: "baviarian_election_2023_mastodon.sqlitedb"]
 {:ok, conn} = Kino.start_child({Exqlite, opts})
+```
+
+```elixir
+File.exists?(config[:database])
+```
+
+<!-- livebook:{"continue_on_error":true} -->
+
+```elixir
+defmodule Mastodon.Repo do
+  use Ecto.Repo,
+    otp_app: :mastodon,
+    adapter: Ecto.Adapters.SQLite3
+end
+```
+
+```elixir
+Mastodon.Repo.start_link()
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule Mastodon.Repo.Migration.CreateToot do
+  use Ecto.Migration
+
+  def change do
+    create table(:toot) do
+      add(:user_name, :string, null: false)
+      add(:toot_id, :string, null: false)
+      add(:content, :string)
+      add(:date, :date)
+      add(:language, :string, default: "de")
+    end
+
+    create(unique_index(:toot, [:user_name, :toot_id]))
+  end
+end
+
+defmodule Mastodon.Repo.Migration.CreateTag do
+  use Ecto.Migration
+
+  def change do
+    create table(:tag) do
+      add(:toot_id, :string, null: false)
+      add(:tag, :string, null: false)
+    end
+
+    create(unique_index(:tag, [:toot_id, :tag]))
+  end
+end
+
+defmodule Mastodon.Repo.Migration.CreateUser do
+  use Ecto.Migration
+
+  def change do
+    create table(:user) do
+      add(:user_name, :string, null: false)
+      add(:followers, :integer)
+      add(:following, :integer)
+      add(:avatar, :string)
+      add(:user_id, :string, null: false)
+      add(:note, :string)
+    end
+
+    create(unique_index(:user_name, [:name]))
+  end
+end
+
+defmodule Mastodon.Repo.Migration.CreateField do
+  use Ecto.Migration
+
+  def change do
+    create table(:field) do
+      add(:user_name, :string, null: false)
+      add(:field_name, :string, null: false)
+      add(:field_value, :string, null: false)
+    end
+
+    create(unique_index(:field, [:user_name, :field_name, :field_value]))
+  end
+end
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule Mastodon.Toot do
+  use Ecto.Schema
+
+  schema "toots" do
+    field(:user_name, :string)
+    field(:toot_id, :string)
+    field(:content, :string)
+    field(:date, :date)
+    field(:language, :string, default: "de")
+
+    has_many(:tags, Mastodon.Tag)
+    has_one(:user, Mastodon.User)
+  end
+end
+
+defmodule Mastodon.Tag do
+  use Ecto.Schema
+
+  schema "tags" do
+    # field(:toot_id, :string)
+    field(:tag, :string)
+    belongs_to(:toot, Mastodon.Toot)
+  end
+end
+
+defmodule Mastodon.User do
+  use Ecto.Schema
+
+  schema "users" do
+    field(:user_name, :string)
+    field(:followers, :integer)
+    field(:following, :integer)
+    field(:avatar, :string)
+    field(:user_id, :string)
+    field(:note, :string)
+
+    has_many(:toots, Mastodon.Toot)
+  end
+end
+
+defmodule Mastodon.Field do
+  use Ecto.Schema
+
+  schema "fields" do
+    field(:user_name, :string)
+    field(:field_name, :string)
+    field(:value, :string)
+    belongs_to(:toot, Mastodon.Toot)
+  end
+end
+```
+
+```elixir
+toot1 = Enum.at(toot_data, 0)
+```
+
+```elixir
+%Mastodon.Toot{}
+|> Ecto.Changeset.cast(toot1, [:content, :date, :id, :language, :user_name])
+|> Ecto.Changeset.validate_required([:id, :user_name])
+|> Ecto.Changeset.unique_constraint(:user_name)
+|> Mastodon.Repo.insert()
 ```
 
 ## Classification
