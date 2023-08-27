@@ -8,7 +8,8 @@ defmodule Mastodon.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      Mastodon.Repo
+      Mastodon.Repo,
+      Mastodon.Scheduler
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -5,3 +5,10 @@ config :mastodon, Mastodon.Repo,
   type: "sqlite"
 
 config :mastodon, ecto_repos: [Mastodon.Repo]
+
+config :mastodon, Mastodon.Scheduler,
+  jobs: [
+    {"@daily", {Backup, :backup, []}},
+    {"@hourly", {Mastodon.WriteDb, :mastodon, []}},
+    {"@reboot", {Mastodon.WriteDb, :mastodon, []}}
+  ]

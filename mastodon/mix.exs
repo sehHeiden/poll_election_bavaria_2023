@@ -24,7 +24,9 @@ defmodule Mastodon.MixProject do
     [
       {:ecto_sql, "~> 3.0"},
       {:ecto_sqlite3, "~> 0.10"},
-      {:httpoison, "~> 1.8"}
+      {:httpoison, "~> 1.8"},
+      {:jason, "~> 1.4"},
+      {:quantum, "~> 3.0"}
     ]
   end
 end
