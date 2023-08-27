@@ -4,7 +4,7 @@ defmodule Mastodon.Field do
   schema "fields" do
     field(:user_name, :string)
     field(:field_name, :string)
-    field(:value, :string)
+    field(:field_value, :string)
 
     belongs_to(:users, Mastodon.User)
   end

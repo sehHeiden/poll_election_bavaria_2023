@@ -7,7 +7,7 @@ defmodule Mastodon.Repo.Migrations.CreateTag do
       add(:tag, :string, null: false)
     end
 
-    # create(unique_index(:tags, [:toot_id, :tag]))
+    create(unique_index(:tags, [:toot_id, :tag]))
     # @primary_key {:id, :binary_id, autogenerate: true}
   end
 end

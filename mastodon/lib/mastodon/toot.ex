@@ -5,7 +5,7 @@ defmodule Mastodon.Toot do
     field(:user_name, :string)
     field(:toot_id, :string)
     field(:content, :string)
-    field(:date, :date)
+    field(:date, :utc_datetime)
     field(:language, :string, default: "de")
 
     has_many(:tags, Mastodon.Tag)

@@ -1,14 +1,28 @@
 defmodule Mastodon.RequestByTag do
+  @moduledoc """
+  Fetch Mastodon posts by tag and partion it.
+  """
+
+  @doc """
+
+  Get all a posts from a:
+
+  ## ParameterizedType
+   - tag: String 
+
+  """
+  @spec query(String.t()) :: List.t()
   def query(tag) do
     response = HTTPoison.get!("https://chaos.social/api/v1/timelines/tag/#{tag}")
     Jason.decode!(response.body)
   end
 
+  @spec getToot(List.t()) :: List.t()
   def getToot(posts) do
     Enum.map(posts, fn post ->
       %{
         user_name: post["account"]["acct"],
-        id: post["id"],
+        toot_id: post["id"],
         content: post["content"],
         date: post["created_at"],
         language: post["language"]
@@ -16,6 +30,7 @@ defmodule Mastodon.RequestByTag do
     end)
   end
 
+  @spec getUser(List.t()) :: List.t()
   def getUser(posts) do
     Enum.map(posts, fn post ->
       %{
@@ -29,13 +44,14 @@ defmodule Mastodon.RequestByTag do
     end)
   end
 
+  @spec getField(List.t()) :: List.t()
   def getField(posts) do
     Enum.map(posts, fn post ->
       fields = post["account"]["fields"]
 
       Enum.map(fields, fn field ->
         %{
-          user_name: post["account"]["user"],
+          user_name: post["account"]["acct"],
           field_name: field["name"],
           field_value: field["value"]
         }
@@ -44,6 +60,7 @@ defmodule Mastodon.RequestByTag do
     |> List.flatten()
   end
 
+  @spec getTag(List.t()) :: List.t()
   def getTag(posts) do
     Enum.map(posts, fn post ->
       tags = post["tags"]
@@ -52,7 +69,7 @@ defmodule Mastodon.RequestByTag do
         tootid = post["id"]
 
         %{
-          "tootid" => tootid,
+          "toot_id" => tootid,
           "tag" => if(tag, do: tag["name"], else: nil)
         }
       end)

@@ -8,6 +8,6 @@ defmodule Mastodon.Repo.Migrations.CreateField do
       add(:field_value, :string, null: false)
     end
 
-    # create(unique_index(:fields, [:user_name, :field_name, :field_value]))
+    create(unique_index(:fields, [:user_name, :field_name, :field_value]))
   end
 end
