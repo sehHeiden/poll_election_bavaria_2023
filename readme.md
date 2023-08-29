@@ -28,7 +28,7 @@ For the porpuse of this project, following Mastodon instances are estimated to b
 
 - mastodon.dachgau.social
 
-- sueden.social (hypothesis: low difference of other southern regions)
+- sueden.social (hypothesis: low difference to other southern regions)
 
 There are more German instances, that are multilingual or have a special base topic. Hence,  I will try do differentiate 
 
@@ -56,7 +56,6 @@ Source: [Landtagswahl in Bayern 2023: Kandidaten, Themen, Termin | BR24](https:/
 
 [Bayerische Linke kürt Adelheid Rupp als Spitzenkandidatin | BR24](https://www.br.de/nachrichten/bayern/bayerische-linke-kuert-adelheid-rupp-als-spitzenkandidatin,TZXl5yd)
 
-
 The strongest party loses percentages in the last year.
 
 ![](./graphics/visualization_csu_polls.svg)
@@ -69,6 +68,56 @@ The most polular oppostion parties show a trend of loosing lefts and gaining ult
 
 ![](./graphics/visualization_gruene_polls.svg)
 ![](./graphics/visualization_afd_polls.svg)
+
+## Population in Germany
+
+Germany has slitly more woman (50.5 %) than man [Bevölkerungsstand: Amtliche Einwohnerzahl Deutschlands 2022 - Statistisches Bundesamt](https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Bevoelkerungsstand/_inhalt.html) . This is due to the age distrution of its citizen [population pyramide]([Bevölkerungspyramide: Altersstruktur Deutschlands von 1950 - 2060](https://service.destatis.de/bevoelkerungspyramide/index.html#!y=2023)) Because man have a higher mortability rate at higher ages. 
+
+a) Get Gender from
+
+1) name
+
+2) note
+
+3) fields
+
+4) user picture?
+
+b) get age distribution??? From text, from user image?
+
+c) get Position from (reverse search or list of place names in Bavaria)
+
+1) Server name
+
+2) Self declaration: notes, fields, tags
+
+3) names in Posts?
+
+d) get Sentiments from: [oliverguhr/german-sentiment-bert · Hugging Face](https://huggingface.co/oliverguhr/german-sentiment-bert)
+
+ 
+
+Tacking the samples:
+
+Posts where fetched from @chaos.social starting 29.09.2023. Only public posts from instances that federate with @chaos.social can/will be retrieved.
+
+Posts where searched by the following tags: 
+
+1) General: bayern, bayernwahl, bayernwahl2023, wahlen, wahlkampf, wahlumfrage wahlen23, wahlen2023
+
+2) Parties: spd, csu, gruene, grune, gruenen, grunen, afd, freiewaehler, freiewahler, fw, fpd, linke
+
+3) Candidates: markussoeder, markussoder, soeder, soder, hubertaiwanger, aiwanger, hartmann, martinhagen, ebnersteiner
+
+Some candidates were not included in the tag search, because the tags where not in used at the beginning of the study. 
+
+
+
+ToDo: 
+
+1) remove html markup
+
+2) Prototype: sentiment analyse
 
 ## Linklist
 
