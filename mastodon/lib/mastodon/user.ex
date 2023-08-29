@@ -9,7 +9,7 @@ defmodule Mastodon.User do
     field(:user_id, :string)
     field(:note, :string)
 
-    has_many(:toots, Mastodon.Toot)
-    has_many(:fields, Mastodon.Field)
+    has_many(:toots, Mastodon.Toot, foreign_key: :id, references: :user_id)
+    has_many(:fields, Mastodon.Field, foreign_key: :id, references: :user_id)
   end
 end

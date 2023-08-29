@@ -8,7 +8,7 @@ defmodule Mastodon.Toot do
     field(:date, :utc_datetime)
     field(:language, :string, default: "de")
 
-    has_many(:tags, Mastodon.Tag)
-    belongs_to(:users, Mastodon.User)
+    has_many(:tags, Mastodon.Tag, foreign_key: :toot_id, references: :id)
+    belongs_to(:users, Mastodon.User, foreign_key: :user_id, references: :id)
   end
 end

@@ -1,9 +1,10 @@
 defmodule Mastodon.Repo.Migrations.CreateUser do
   use Ecto.Migration
 
+
   def change do
     create table(:users) do
-      add(:user_name, :string, null: false, primary_key: true)
+      add(:user_name, :string, null: false)
       add(:followers, :integer)
       add(:following, :integer)
       add(:avatar, :string)

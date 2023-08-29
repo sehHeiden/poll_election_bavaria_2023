@@ -6,6 +6,6 @@ defmodule Mastodon.Field do
     field(:field_name, :string)
     field(:field_value, :string)
 
-    belongs_to(:users, Mastodon.User)
+    belongs_to(:users, Mastodon.User, foreign_key: :user_id, references: :id)
   end
 end
