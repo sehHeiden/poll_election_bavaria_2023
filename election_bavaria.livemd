@@ -3,11 +3,14 @@
 ```elixir
 Mix.install(
   [
-    {:explorer, "~> 0.6.1"},
+    {:explorer, "~> 0.7"},
     {:kino_vega_lite, "~> 0.1.7"},
     {:httpoison, "~> 1.8"},
     {:kino_bumblebee, "~> 0.3.0"},
-    {:exla, "~> 0.5.1"}
+    {:exla, "~> 0.5.1"},
+    {:axon_onnx, "~> 0.4"},
+    {:kino_db, "~> 0.2.1"},
+    {:adbc, "~> 0.1"}
   ],
   config: [
     nx: [default_backend: EXLA.Backend]
@@ -92,26 +95,78 @@ parties_df =
     candidate2: [nil, nil, nil, "Katharina Schulze", nil, "Martin Böhm", nil]
   )
 
-Explorer.DataFrame.table(parties_df)
+Explorer.DataFrame.head(parties_df)
+```
+
+## Preprocessing
+
+```elixir
+p = Path.absname("mastodon/mastodon_bayernwahl2023.db")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+db =
+  Kino.start_child(
+    {Adbc.Database, driver: :sqlite, uri: "file:mastodon/mastodon_bayernwahl2023.db"}
+  )
+```
+
+```elixir
+conn = Kino.start_child({Adbc.Connection, database: db})
+Explorer.DataFrame.from_query(conn, "select * from toots", [])
 ```
 
 ## Classification
 
-<!-- livebook:{"attrs":{"compiler":"exla","sequence_length":100,"task_id":"text_classification","top_k":4,"variant_id":"roberta_bertweet_sentiment"},"chunks":[[0,351],[353,496]],"kind":"Elixir.KinoBumblebee.TaskCell","livebook_object":"smart_cell"} -->
+```elixir
+{model, params} = AxonOnnx.import("./models/models/german_sentiment_model.onnx")
+```
 
 ```elixir
-{:ok, model_info} = Bumblebee.load_model({:hf, "finiteautomata/bertweet-base-sentiment-analysis"})
+{:ok, vocab_string} = File.read("./models/models/vocab.json")
+{:ok, vocab_map} = Jason.decode(vocab_string)
+```
 
-{:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "vinai/bertweet-base"})
+```elixir
+# Tokenize
+input_text = "Ein scheiß Film"
+token_list = Enum.map(String.split(input_text, " "), fn x -> Map.get(vocab_map, x, 0) end)
+token_tensor = Nx.tensor(List.duplicate(0, 512 - length(token_list)))
+token_tensor = Nx.concatenate([Nx.tensor(token_list), token_tensor])
+```
+
+```elixir
+{init_fn, predict_fn} = Axon.build(model)
+```
+
+```elixir
+import Nx.Defn
+
+defn poltical_score(prediction) do
+  one_hot = ** prediction / Nx.sum(2 ** prediction)
+  5 * (one_hot[0][0] - one_hot[0][1])
+end
+
+prediction = predict_fn.(params, token_tensor)
+poltical_score(prediction)
+```
+
+<!-- livebook:{"attrs":{"compiler":"exla","sequence_length":100,"task_id":"text_classification","top_k":null,"variant_id":"xlm_roberta_language_detection"},"chunks":[[0,359],[361,496]],"kind":"Elixir.KinoBumblebee.TaskCell","livebook_object":"smart_cell"} -->
+
+```elixir
+{:ok, model_info} = Bumblebee.load_model({:hf, "papluca/xlm-roberta-base-language-detection"})
+
+{:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "papluca/xlm-roberta-base-language-detection"})
 
 serving =
   Bumblebee.Text.text_classification(model_info, tokenizer,
-    top_k: 4,
     compile: [batch_size: 1, sequence_length: 100],
     defn_options: [compiler: EXLA]
   )
 
-text_input = Kino.Input.textarea("Text", default: "Cats are so cute")
+text_input = Kino.Input.textarea("Text", default: "La casa de papel")
 form = Kino.Control.form([text: text_input], submit: "Run")
 frame = Kino.Frame.new()
 
