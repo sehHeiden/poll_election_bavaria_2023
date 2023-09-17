@@ -22,11 +22,18 @@ Mix.install(
 ## Polls
 
 ```elixir
+require Explorer.DataFrame
+
 alias VegaLite, as: Vl
+alias Explorer.DataFrame, as: DF
+alias Explorer.Series, as: S
 ```
 
+Load the csv with the polls from different instiutions form the website [wahlrecht.de](https://www.wahlrecht.de/umfragen/landtage/bayern.htm#fn-bp).
+Show the timeline and trend for every party.
+
 ```elixir
-polls = Explorer.DataFrame.from_csv!("polls.csv")
+polls = DF.from_csv!("polls.csv")
 ```
 
 ```elixir
@@ -78,11 +85,11 @@ Graphs.create_graph(polls, "Polls - FDP", "fdp")
 Graphs.create_graph(polls, "Polls - Linke", "linke")
 ```
 
-## Party
+## Parties
 
 ```elixir
 parties_df =
-  Explorer.DataFrame.new(
+  DF.new(
     party: ["csu", "fw", "spd", "gruene", "fdp", "afd", "linke"],
     candiate1: [
       "Markus Söder",
@@ -96,7 +103,7 @@ parties_df =
     candidate2: [nil, nil, nil, "Katharina Schulze", nil, "Martin Böhm", nil]
   )
 
-Explorer.DataFrame.head(parties_df)
+DF.head(parties_df)
 ```
 
 ## Preprocessing posts for sentiment analysis
@@ -105,7 +112,8 @@ Before the sentiments can be read from the posts. It is nessescary to remove htm
 The mastodon tags, need to be converted to text.
 
 ```elixir
-f = "./mastodon/mastodon_bayernwahl2023.db"
+# f = "./mastodon/mastodon_bayernwahl2023.db"
+f = "mastodon_bayernwahl2023_20230910.db"
 p = Path.absname(f)
 ```
 
@@ -124,6 +132,19 @@ Adbc.download_driver!(:sqlite)
 {:ok, toots_df} = Explorer.DataFrame.from_query(conn, "select * from toots", [])
 ```
 
+Remove:
+
+* HTML
+* #-Sign
+* @-Sign
+* _-Sign
+* links
+
+Left in:
+
+* Simileys (language model might know them)
+* numbers (language model converts them)
+
 <!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
@@ -131,20 +152,12 @@ posts =
   toots_df[:content]
   |> Explorer.Series.to_list()
 
-# r = ~r/ https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/
 r =
   Regex.compile!(
-    "<[^>]*>|#|https?:\/\/(?:www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)*(\/[\/\d\w\.-]*)*(?:[\?])*(.+)*|="
+    "<[^>]*>|#|@|_|https?:\/\/(?:www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)*(\/[\/\d\w\.-]*)*(?:[\?])*(.+)*|="
   )
 
 cleared_posts = Enum.map(posts, &Regex.replace(r, &1, ""))
-
-r =
-  Regex.compile!(
-    "https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)"
-  )
-
-cleared_posts = Enum.map(cleared_posts, &Regex.replace(r, &1, ""))
 ```
 
 ## Classification
@@ -155,7 +168,7 @@ Than the german text are evaluated with **german-sentiment_bert**.
 
 English texts with **RoBERTa (BERTtweet) - Sentiment**.
 
-### language detection
+### Language Detection
 
 ```elixir
 {:ok, model_info} = Bumblebee.load_model({:hf, "papluca/xlm-roberta-base-language-detection"})
@@ -173,8 +186,10 @@ serving =
 p = Nx.Serving.run(serving, cleared_posts)
 ```
 
+Each predictions is ordered by probybility. Hence always selecting the label the first language returns the most likely one.
+
 ```elixir
-languages =
+detected_languages =
   Enum.map(p, fn post ->
     post
     |> Enum.at(0)
@@ -184,9 +199,49 @@ languages =
   end)
 ```
 
+The majority of 96% of all saved posts are detected as german. 1.3 % are detected as English.
+Why 1 %  are detected as Thai and 0.5 % are detected as Hindi has to be find out. That 0.6 % are detected as Dutch is more plausable.
+
 ```elixir
-Enum.frequencies(languages)
+detected_languages
+|> Enum.frequencies()
+|> Enum.sort_by(&elem(&1, 1), :desc)
+|> Enum.map(fn {lang, freq} -> {lang, freq / length(detected_languages) * 100.0} end)
 ```
+
+In contrast the manually set language are 92%, 6 % language (often the default) and 1.3 % nil (not specified).
+
+```elixir
+toots_df["language"]
+|> S.to_list()
+|> Enum.frequencies()
+|> Enum.sort_by(&elem(&1, 1), :desc)
+|> Enum.map(fn {lang, freq} -> {lang, freq / length(detected_languages) * 100.0} end)
+```
+
+```elixir
+toots_df = DF.put(toots_df, "detected_languages", detected_languages)
+toots_df = DF.put(toots_df, "cleared_content", cleared_posts)
+```
+
+From visual analysis the langauge attribute is often set wrong, as it set manually, with a given default. Often the language was set to English, when it was German or set to nil. Therefore the language has been evaluated by language detection model, which changed the language in 8.4 % of all posts.
+
+```elixir
+reasigned_language =
+  toots_df["language"]
+  |> S.not_equal(toots_df["detected_languages"])
+  |> S.to_list()
+  |> Enum.map(&if &1, do: 1, else: 0)
+  |> Enum.sum()
+
+reasigned_language / S.size(toots_df["language"]) * 100.0
+```
+
+ToDo:
+
+1. Batched run -> less ram, longer texts
+
+<!-- livebook:{"break_markdown":true} -->
 
 ### German Sentiments
 
@@ -196,50 +251,74 @@ Enum.frequencies(languages)
 ```
 
 ```elixir
+german_toots_df = DF.filter(toots_df, detected_languages == "de")
+german_toots = S.to_list(german_toots_df["cleared_content"])
+```
+
+```elixir
 serving =
   Bumblebee.Text.text_classification(model_info, tokenizer, defn_options: [compiler: EXLA])
 
-texts = [
-  "Entnazifizierung in Kaltland: Beantworten Sie 25 Fragen und Sie dürfen alle Ihre Ämter und Verantwortlichkeiten behalten aiwanger bayern csu",
-  "Das ist gar nicht mal so gut",
-  "Total awesome!",
-  "nicht so schlecht wie erwartet",
-  "Der Test verlief positiv.",
-  "Sie fährt ein grünes Auto.",
-  "So ein scheiß Film."
-]
-
-Nx.Serving.run(serving, texts)
+Nx.Serving.run(serving, german_toots)
 ```
+
+ToDo:
+
+1. batched run of sentiment analysis
+2. combine the scores as for English
+3. same todos as for English
+
+<!-- livebook:{"break_markdown":true} -->
 
 ### Englisch Sentiment
 
 ```elixir
-{:ok, model_info} = Bumblebee.load_model({:hf, "finiteautomata/bertweet-base-sentiment-analysis"})
+english_toots_df = DF.filter(toots_df, detected_languages == "en")
+english_toots = S.to_list(english_toots_df["cleared_content"])
+```
 
+```elixir
+defmodule SentimentScore do
+  def score(prediction) do
+    prediction
+    |> Enum.map(fn p ->
+      cond do
+        p.label == "POS" -> p.score
+        p.label == "NEG" -> -p.score
+        p.label == "NEU" -> 0
+      end
+    end)
+    |> Enum.sum()
+  end
+end
+```
+
+```elixir
+{:ok, model_info} = Bumblebee.load_model({:hf, "finiteautomata/bertweet-base-sentiment-analysis"})
 {:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "vinai/bertweet-base"})
 
 serving =
   Bumblebee.Text.text_classification(model_info, tokenizer,
-    compile: [batch_size: 1, sequence_length: 100],
+    compile: [batch_size: length(english_toots), sequence_length: 100],
     defn_options: [compiler: EXLA]
   )
 ```
 
 ```elixir
-text_input = Kino.Input.textarea("Text", default: "Cats are so cute")
-form = Kino.Control.form([text: text_input], submit: "Run")
-frame = Kino.Frame.new()
-
-Kino.listen(form, fn %{data: %{text: text}} ->
-  Kino.Frame.render(frame, Kino.Text.new("Running..."))
-  output = Nx.Serving.run(serving, text)
-
-  output.predictions
-  |> Enum.map(&{&1.label, &1.score})
-  |> Kino.Bumblebee.ScoredList.new()
-  |> then(&Kino.Frame.render(frame, &1))
-end)
-
-Kino.Layout.grid([form, frame], boxed: true, gap: 16)
+predictions = Nx.Serving.run(serving, english_toots)
+sentiments = Enum.map(predictions, fn x -> SentimentScore.score(x.predictions) end)
+DF.put(english_toots_df, "sentiment", sentiments)
 ```
+
+ToDo:
+
+1. Match the sentiments to a party.
+2. Date -> calendar weeks
+
+## Attribution
+
+ToDo:
+
+1. Filter: Topic of posts is really about Bavaria
+2. Attribution of Sentiment to a single party
+3. Filter: No party, multiple parties

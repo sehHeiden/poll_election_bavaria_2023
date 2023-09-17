@@ -2,9 +2,7 @@
 
 ## Task
 
-Analyse the mastodon toots about the bavarian election on Oct, 8th 2023. Appling a sentiment analysis on the toots. Differentiate region by Mastodon instance.
-
-Perhaps also by language features? Trying to differentiat by age.
+Analyse the mastodon toots about the bavarian election on Oct, 8th 2023. Appling a sentiment analysis on the toots. Differentiate region.
 
 ## Background
 
@@ -29,14 +27,16 @@ For the porpuse of this project, following Mastodon instances are estimated to b
 - mastodon.dachgau.social
 
 - sueden.social (hypothesis: low difference to other southern regions)
+  
+  
 
 There are more German instances, that are multilingual or have a special base topic. Hence,  I will try do differentiate 
 
 1) Which users on others servers are bavarian (is this possible by speech analysis?)
 
-2) Try to estimate how, Germany in whole would elect differently.
+2) Try to estimate how, Germany at large would elect differently.
 
-3) Differentiate the peer groups (by computervision, text analysis)?
+3) Differentiate the peer groups (by computervision, text analysis, regex)
 
 ## Parties
 
@@ -55,6 +55,10 @@ The sentiment for the following parties will be watched (sorted from left to rig
 Source: [Landtagswahl in Bayern 2023: Kandidaten, Themen, Termin | BR24](https://www.br.de/nachrichten/bayern/landtagswahl-in-bayern-2023-termin-themen-kandidaten,TMD4uSM)
 
 [Bayerische Linke kürt Adelheid Rupp als Spitzenkandidatin | BR24](https://www.br.de/nachrichten/bayern/bayerische-linke-kuert-adelheid-rupp-als-spitzenkandidatin,TZXl5yd)
+
+## Polls
+
+Tolls from different sources are listed at [wahlrecht.de]([Wahlumfragen zur Landtagswahl 2023 in Bayern (Sonntagsfrage #ltwby)](https://www.wahlrecht.de/umfragen/landtage/bayern.htm#fn-bp)). The time lime for each party for the 
 
 The strongest party loses percentages in the last year.
 
@@ -95,8 +99,6 @@ c) get Position from (reverse search or list of place names in Bavaria)
 
 d) get Sentiments from: [oliverguhr/german-sentiment-bert · Hugging Face](https://huggingface.co/oliverguhr/german-sentiment-bert)
 
- 
-
 Tacking the samples:
 
 Posts where fetched from @chaos.social starting 29.09.2023. Only public posts from instances that federate with @chaos.social can/will be retrieved.
@@ -110,8 +112,6 @@ Posts where searched by the following tags:
 3) Candidates: markussoeder, markussoder, soeder, soder, hubertaiwanger, aiwanger, hartmann, martinhagen, ebnersteiner
 
 Some candidates were not included in the tag search, because the tags where not in used at the beginning of the study. 
-
-
 
 ToDo: 
 
