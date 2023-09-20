@@ -3,14 +3,12 @@
 ```elixir
 Mix.install(
   [
-    {:bumblebee, "~> 0.3"},
+    {:nx, "~>0.6.1"},
+    {:bumblebee, github: :"elixir-nx/bumblebee"},
     {:explorer, "~> 0.7"},
     {:kino_vega_lite, "~> 0.1.7"},
     {:httpoison, "~> 1.8"},
-    {:kino_bumblebee, "~> 0.3.0"},
-    {:exla, "~> 0.5.1"},
-    {:axon_onnx, "~> 0.4"},
-    {:kino_db, "~> 0.2.1"},
+    {:exla, "~> 0.6.1"},
     {:adbc, "~> 0.1"}
   ],
   config: [
@@ -160,30 +158,72 @@ r =
 cleared_posts = Enum.map(posts, &Regex.replace(r, &1, ""))
 ```
 
-## Classification
+```elixir
+toots_df = DF.put(toots_df, "cleared_content", cleared_posts)
+```
 
-Before the sentiment analysis. The langauage has to be checked. As the language attribute is very often not correct.
-Therefore a language detection has to be made first with **XLM-RoBERTa - language detection**.
-Than the german text are evaluated with **german-sentiment_bert**.
+## Filter posts
 
-English texts with **RoBERTa (BERTtweet) - Sentiment**.
+ToDo:
 
-### Language Detection
+1. Filter: Topic of posts is really about Bavaria
+2. Attribution of Sentiment to a single party
+3. Filter: No party, multiple parties
 
 ```elixir
-{:ok, model_info} = Bumblebee.load_model({:hf, "papluca/xlm-roberta-base-language-detection"})
-
-{:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "papluca/xlm-roberta-base-language-detection"})
-
-serving =
-  Bumblebee.Text.text_classification(model_info, tokenizer,
-    compile: [batch_size: length(cleared_posts), sequence_length: 100],
-    defn_options: [compiler: EXLA]
-  )
+candidate_family_names =
+  parties_df["candiate1"]
+  |> S.concat(parties_df["candidate2"])
+  |> S.to_list()
+  |> Enum.filter(&is_binary(&1))
+  |> Enum.map(&(String.split(&1, " ", parts: 2) |> Enum.at(1)))
 ```
 
 ```elixir
-p = Nx.Serving.run(serving, cleared_posts)
+toots_df["cleared_content"]
+|> S.downcase()
+# add CSU
+|> S.contains("bayern")
+```
+
+## Classification
+
+Before the sentiment analysis. The langauage has to be checked. As the language attribute is very often not correct.
+Therefore a language detection has to be made first, before the sentiment analysis
+
+1. **XLM-RoBERTa** - language detection
+2. **german-sentiment_bert** - Sentiment Analysis German
+3. **RoBERTa (BERTtweet) - Sentiment** - English language Sentiment analysis
+
+### Language Detection
+
+The modules takes a different number of maximum tokens. The language detection takes up to 514 tokens, but the results updates of the self set languages is similar to 100 tokens. Therefore we restrict to 100 tokens.
+
+```elixir
+{:ok, lang_detect_model_info} =
+  Bumblebee.load_model({:hf, "papluca/xlm-roberta-base-language-detection"})
+
+{:ok, lang_detect_tokenizer} =
+  Bumblebee.load_tokenizer({:hf, "papluca/xlm-roberta-base-language-detection"})
+
+lang_detect_serving =
+  Bumblebee.Text.text_classification(lang_detect_model_info, lang_detect_tokenizer,
+    compile: [batch_size: 32, sequence_length: 100],
+    defn_options: [compiler: EXLA]
+  )
+
+lang_detect_model_info.spec.max_positions
+```
+
+```elixir
+Kino.start_child({
+  Nx.Serving,
+  serving: lang_detect_serving, name: LangDetextServer
+})
+```
+
+```elixir
+p = Nx.Serving.batched_run(LangDetextServer, cleared_posts)
 ```
 
 Each predictions is ordered by probybility. Hence always selecting the label the first language returns the most likely one.
@@ -221,7 +261,6 @@ toots_df["language"]
 
 ```elixir
 toots_df = DF.put(toots_df, "detected_languages", detected_languages)
-toots_df = DF.put(toots_df, "cleared_content", cleared_posts)
 ```
 
 From visual analysis the langauge attribute is often set wrong, as it set manually, with a given default. Often the language was set to English, when it was German or set to nil. Therefore the language has been evaluated by language detection model, which changed the language in 8.4 % of all posts.
@@ -245,9 +284,27 @@ ToDo:
 
 ### German Sentiments
 
+<!-- livebook:{"break_markdown":true} -->
+
+The German sentiment analysis works with up to 512 tokens.
+
 ```elixir
-{:ok, model_info} = Bumblebee.load_model({:hf, "oliverguhr/german-sentiment-bert"})
-{:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "bert-base-german-cased"})
+{:ok, ger_sent_model_info} = Bumblebee.load_model({:hf, "oliverguhr/german-sentiment-bert"})
+{:ok, ger_sent_tokenizer} = Bumblebee.load_tokenizer({:hf, "bert-base-german-cased"})
+ger_sent_model_info.spec.max_positions
+```
+
+```elixir
+ger_sent_serving =
+  Bumblebee.Text.text_classification(ger_sent_model_info, ger_sent_tokenizer,
+    compile: [batch_size: 64, sequence_length: 512],
+    defn_options: [compiler: EXLA]
+  )
+
+Kino.start_child({
+  Nx.Serving,
+  serving: ger_sent_serving, name: GerSentimentServer
+})
 ```
 
 ```elixir
@@ -256,10 +313,28 @@ german_toots = S.to_list(german_toots_df["cleared_content"])
 ```
 
 ```elixir
-serving =
-  Bumblebee.Text.text_classification(model_info, tokenizer, defn_options: [compiler: EXLA])
+ger_predictions = Nx.Serving.batched_run(GerSentimentServer, german_toots)
+```
 
-Nx.Serving.run(serving, german_toots)
+```elixir
+defmodule SentimentScore do
+  def score(prediction) do
+    prediction
+    |> Enum.map(fn p ->
+      cond do
+        p.label == "POS" or p.label == "positive" -> p.score
+        p.label == "NEG" or p.label == "negative" -> -p.score
+        p.label == "NEU" or p.label == "neutral" -> 0
+      end
+    end)
+    |> Enum.sum()
+  end
+end
+```
+
+```elixir
+ger_sentiments = Enum.map(ger_predictions, fn x -> SentimentScore.score(x.predictions) end)
+DF.put(german_toots_df, "sentiment", ger_sentiments)
 ```
 
 ToDo:
@@ -272,42 +347,38 @@ ToDo:
 
 ### Englisch Sentiment
 
+The sentiment analysis on the English text works only with 130 tokens.
+
 ```elixir
 english_toots_df = DF.filter(toots_df, detected_languages == "en")
 english_toots = S.to_list(english_toots_df["cleared_content"])
 ```
 
 ```elixir
-defmodule SentimentScore do
-  def score(prediction) do
-    prediction
-    |> Enum.map(fn p ->
-      cond do
-        p.label == "POS" -> p.score
-        p.label == "NEG" -> -p.score
-        p.label == "NEU" -> 0
-      end
-    end)
-    |> Enum.sum()
-  end
-end
-```
-
-```elixir
 {:ok, model_info} = Bumblebee.load_model({:hf, "finiteautomata/bertweet-base-sentiment-analysis"})
 {:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "vinai/bertweet-base"})
 
-serving =
+english_sentiment_serving =
   Bumblebee.Text.text_classification(model_info, tokenizer,
-    compile: [batch_size: length(english_toots), sequence_length: 100],
+    compile: [batch_size: 32, sequence_length: 130],
     defn_options: [compiler: EXLA]
   )
 ```
 
 ```elixir
-predictions = Nx.Serving.run(serving, english_toots)
-sentiments = Enum.map(predictions, fn x -> SentimentScore.score(x.predictions) end)
-DF.put(english_toots_df, "sentiment", sentiments)
+Kino.start_child({
+  Nx.Serving,
+  serving: english_sentiment_serving, name: EngSentimentServer
+})
+```
+
+```elixir
+eng_predictions = Nx.Serving.batched_run(EngSentimentServer, english_toots)
+```
+
+```elixir
+eng_sentiments = Enum.map(eng_predictions, fn x -> SentimentScore.score(x.predictions) end)
+DF.put(english_toots_df, "sentiment", eng_sentiments)
 ```
 
 ToDo:
@@ -317,8 +388,21 @@ ToDo:
 
 ## Attribution
 
-ToDo:
+* gender
 
-1. Filter: Topic of posts is really about Bavaria
-2. Attribution of Sentiment to a single party
-3. Filter: No party, multiple parties
+* bavarian
+
+* age (perhaps)
+
+* sentiment -> Party
+
+* date -> calendar week
+
+```elixir
+{:ok, person_df} = Explorer.DataFrame.from_query(conn, "select * from users", [])
+```
+
+```elixir
+bavarian_instances = ~w"muenchen.social augsburg.social mastodon.bayern nuernberg.social 
+ploen.social wue.social mastodon.dachgau.social  sueden.social"
+```
