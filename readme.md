@@ -8,37 +8,11 @@ Analyse the mastodon toots about the bavarian election on Oct, 8th 2023. Appling
 
 Mastodon is a micro blogging service, that is federated and part of the fediverse. Depending on the source Mastodon 8.1 M users world wide ([fedidb](https://fedidb.org/)),  or 13.8 M users (@mastodonusercount@mastodon.social) on 08/06/2023.
 
+
+
 Mastodon has a relative high number regional servers. A high number are German. 
 
-For the porpuse of this project, following Mastodon instances are estimated to be used by bavarian users (only):
-
-- muenchen.social
-
-- augsburg.social
-
-- mastodon.bayern
-
-- nuernberg.social
-
-- ploen.social
-
-- wue.social (Würzburg)
-
-- mastodon.dachgau.social
-
-- sueden.social (hypothesis: low difference to other southern regions)
-  
-  
-
-There are more German instances, that are multilingual or have a special base topic. Hence,  I will try do differentiate 
-
-1) Which users on others servers are bavarian (is this possible by speech analysis?)
-
-2) Try to estimate how, Germany at large would elect differently.
-
-3) Differentiate the peer groups (by computervision, text analysis, regex)
-
-## Parties
+## Monitored Parties
 
 The sentiment for the following parties will be watched (sorted from left to right):
 
@@ -77,47 +51,87 @@ The most polular oppostion parties show a trend of loosing lefts and gaining ult
 
 Germany has slitly more woman (50.5 %) than man [Bevölkerungsstand: Amtliche Einwohnerzahl Deutschlands 2022 - Statistisches Bundesamt](https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Bevoelkerungsstand/_inhalt.html) . This is due to the age distrution of its citizen [population pyramide]([Bevölkerungspyramide: Altersstruktur Deutschlands von 1950 - 2060](https://service.destatis.de/bevoelkerungspyramide/index.html#!y=2023)) Because man have a higher mortability rate at higher ages. 
 
-a) Get Gender from
+
+
+## Approach
+
+Following tags are monitored on the instance *chaos.social* by the topics:
+
+- Bavaria: bayern bayernwahl bayernwahl2023 
+
+- Election: wahlen wahlkampf wahlumfrage wahlen23 wahlen2023 
+
+- Parties: spd csu gruene  grune gruenen grunen afd freiewaehler freiewahler fw fpd linke 
+
+- Candidates: markussoeder markussoder soeder soder hubertaiwanger aiwanger hartmann martinhagen ebnersteiner
+
+Some candidates were not included in the tag search, because the tags where not in used at the beginning of the study.
+
+
+
+A wide set of topics have been selected to retrieve a maximum of taged posts. Throw the federation of instances, it is possible that not all instances share posts, or not all posts. Still only a single instance have been monitored, so that 
+
+
+
+Search of posts without the need of tags, have been added during the monitoring with Mastodon version 4.2.  Developmentis done on the instance *mastodon.social*, when other instane follow, a stable release is up to there administration. Search without tags might retrieve addition posts.
+
+The posts have been retrieve via the api:***instance_url/api/v1/timelines/tag/#{tag}*** Which is done without a login, therefore only public posts are monitored.
+
+
+
+The api is requested every full hour starting 08/29/23 non stop on a raspberry pi. First data have been inserted 08/28/23. The monitoring is done with a Elixir programm that runs on Erlang's BEAM runtime. To increase stabiliy. Therefore each post is written for into four tables of a SQLite3 database. The toots table contains the post itself and some of its user data. The users table contains some data of the posts about the users, that wrote the posts.
+
+The  related table fields contains the fields a user can set, to contain some information about him-/herself. The related tags table contains all tags of every post.
+
+
+
+The evaluation is done in a Elixir Livebook.
+
+The posts are first filtered to contain any of the candidate names or the name Bavaria, or the party name CSU, as it is a regional party. The other parties are eligible nationwide. Than the special characters and html mark-ups are removed. The posts are filtered whether only a single party is mentioned.
+
+The posts also contain a language lable, but this is set by the user or his/her application and is errorprone. Therefore, the language is detected by the model [***papluca/xlm-roberta-base-language-detection***]([papluca/xlm-roberta-base-language-detection · Hugging Face](https://huggingface.co/papluca/xlm-roberta-base-language-detection)).  The model is included in the Livebook smart cells.
+
+The german sentiment analysis is done with the model [***oliverguhr/german-sentiment-bert***]([oliverguhr/german-sentiment-bert · Hugging Face](https://huggingface.co/oliverguhr/german-sentiment-bert)). The model is a python package. Therefore an attempt to use is in Elixir has been done with ONNX. The problem was the correct setting of the tokenizer (bert-base-german-cased). Therefore it was much simpler to use the Elixir library Bumblebee, that makes both useable with less code. The python code that generated the onnx file and the vocab.json is included.
+
+The few English language posts are evaluated with the model [***finiteautomata/bertweet-base-sentiment-analysis***]([finiteautomata/bertweet-base-sentiment-analysis · Hugging Face](https://huggingface.co/finiteautomata/bertweet-base-sentiment-analysis)). 
+
+The remaining posts are selected into the three groups, Bavarian, German, English.
+
+For the porpuse of this project, following Mastodon instances are estimated to be used by bavarian users (only):
+
+- muenchen.social
+
+- augsburg.social
+
+- mastodon.bayern
+
+- nuernberg.social
+
+- ploen.social
+
+- wue.social (Würzburg)
+
+- mastodon.dachgau.social
+
+- sueden.social (hypothesis: low difference to other southern regions)
+
+In addition the fields and notes of each user are scanned for Bavarian location names. 
+
+As final seperation the gender of each user is estimated by:
 
 1) name
 
-2) note
+2) user note text 
 
-3) fields
+3) user fields
 
 4) user picture?
 
+
+
 b) get age distribution??? From text, from user image?
 
-c) get Position from (reverse search or list of place names in Bavaria)
 
-1) Server name
-
-2) Self declaration: notes, fields, tags
-
-3) names in Posts?
-
-d) get Sentiments from: [oliverguhr/german-sentiment-bert · Hugging Face](https://huggingface.co/oliverguhr/german-sentiment-bert)
-
-Tacking the samples:
-
-Posts where fetched from @chaos.social starting 29.09.2023. Only public posts from instances that federate with @chaos.social can/will be retrieved.
-
-Posts where searched by the following tags: 
-
-1) General: bayern, bayernwahl, bayernwahl2023, wahlen, wahlkampf, wahlumfrage wahlen23, wahlen2023
-
-2) Parties: spd, csu, gruene, grune, gruenen, grunen, afd, freiewaehler, freiewahler, fw, fpd, linke
-
-3) Candidates: markussoeder, markussoder, soeder, soder, hubertaiwanger, aiwanger, hartmann, martinhagen, ebnersteiner
-
-Some candidates were not included in the tag search, because the tags where not in used at the beginning of the study. 
-
-ToDo: 
-
-1) remove html markup
-
-2) Prototype: sentiment analyse
 
 ## Linklist
 
@@ -126,28 +140,14 @@ ToDo:
 - [fedidb](https://fedidb.org/)
 - [OSM - Mastodon server](https://umap.openstreetmap.fr/en/map/mastodon-near-me-global-mastodon-server-list-by-co_828094)
 - [Mastodon Python API](https://mastodonpy.readthedocs.io/en/stable/07_timelines.html)
-- [Elixir: MastodonClient — mastodon_client v0.1.0](https://hexdocs.pm/mastodon_client/readme.html#usage)
-- [Elixir: ueberauth_mastodon — ueberauth_mastodon v0.2.1](https://hexdocs.pm/ueberauth_mastodon/readme.html)
-- [Mastodon Example](https://www.sothawo.com/post/2023/05/07/download-the-list-of-followers-from-your-mastodon-account/)
+  
+  
 
 ### Twitter
 
 - [APIs](https://developer.twitter.com/en/docs/twitter-api/tools-and-libraries/v2)
 
-### NLP - Sentiment
-
-https://spacy.io/universe/project/spacy-sentiws
-
-https://www.nltk.org/book/ch01.html
-
-https://medium.com/@michael.zats/effortless-sentiment-analysis-in-german-language-with-python-d870798acd9d
-
-https://github.com/oliverguhr/german-sentiment-lib
-[oliverguhr/german-sentiment-bert · Hugging Face](https://huggingface.co/oliverguhr/german-sentiment-bert)     
-
-https://github.com/adbar/German-NLP
-
-https://machine-learning-blog.de/2019/06/03/stimmungsanalyse-sentiment-analysis-auf-deutsch-mit-python/
+### 
 
 ### Umfragen
 
