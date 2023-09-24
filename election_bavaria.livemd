@@ -47,7 +47,7 @@ defmodule Graphs do
       |> Vl.encode_field(:color, "institute", type: :nominal),
       Vl.new()
       |> Vl.mark(:line, color: "firebrick", opacity: 0.5)
-      |> Vl.transform(regression: party, on: "end_date")
+      |> Vl.transform(loess: party, on: "end_date", bandwidth: 0.8)
       |> Vl.encode_field(:x, "end_date", type: :temporal, title: "poll end date")
       |> Vl.encode_field(:y, party, type: :quantitative, title: "percentage")
     ])
@@ -101,7 +101,7 @@ parties_df =
     candidate2: [nil, nil, nil, "Katharina Schulze", nil, "Martin Böhm", nil]
   )
 
-DF.head(parties_df)
+DF.print(parties_df)
 ```
 
 ## Preprocessing posts for sentiment analysis
@@ -128,6 +128,17 @@ Adbc.download_driver!(:sqlite)
 
 ```elixir
 {:ok, toots_df} = Explorer.DataFrame.from_query(conn, "select * from toots", [])
+```
+
+Convert date column from string to naive date time.
+
+```elixir
+dt =
+  S.to_list(toots_df["date"])
+  |> Enum.map(&elem(NaiveDateTime.from_iso8601(&1), 1))
+  |> S.from_list()
+
+toots_df = DF.put(toots_df, "date", dt)
 ```
 
 Remove:
@@ -171,19 +182,120 @@ ToDo:
 3. Filter: No party, multiple parties
 
 ```elixir
+defmodule Names do
+  def append_variants(names) do
+    names
+    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, " ", "") end))
+    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "ö", "o") end))
+    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "ö", "oe") end))
+    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "-", "") end))
+    |> Enum.uniq()
+  end
+
+  def family_name(y) do
+    String.split(y, " ", parts: 2) |> Enum.at(1)
+  end
+end
+
 candidate_family_names =
   parties_df["candiate1"]
   |> S.concat(parties_df["candidate2"])
+  |> S.downcase()
   |> S.to_list()
   |> Enum.filter(&is_binary(&1))
-  |> Enum.map(&(String.split(&1, " ", parts: 2) |> Enum.at(1)))
+  |> Enum.map(&Names.family_name(&1))
+
+candidate_family_names =
+  candidate_family_names
+  |> Names.append_variants()
+  |> Enum.join("|")
+
+bavaria_tags = Regex.compile!("bayern|csu|" <> candidate_family_names)
+```
+
+Filter: Contains at least a single cantidate.
+
+```elixir
+bavarian_post_filter =
+  toots_df["cleared_content"]
+  |> S.downcase()
+  |> S.transform(&Regex.match?(bavaria_tags, &1))
+
+bavarian_toots_df = DF.mask(toots_df, bavarian_post_filter)
+```
+
+Filter all posts that the toots, contains only a single party or its candidates per post.
+
+```elixir
+party_regexes =
+  DF.to_rows(parties_df)
+  # only per line in DataFrame
+  |> Enum.map(fn x ->
+    x
+    # only takes the values
+    |> Map.values()
+    # remove nils
+    |> Enum.filter(&is_bitstring(&1))
+    # take family names if candidate anmes
+    |> Enum.map(fn y ->
+      cond do
+        Names.family_name(y) == nil -> y
+        true -> Names.family_name(y)
+      end
+    end)
+    |> Names.append_variants()
+    |> Enum.join("|")
+    |> String.downcase()
+    |> Regex.compile!()
+  end)
 ```
 
 ```elixir
-toots_df["cleared_content"]
-|> S.downcase()
-# add CSU
-|> S.contains("bayern")
+defmodule Bool do
+  def to_integer(true), do: 1
+  def to_integer(false), do: 0
+  def to_integer(nil), do: 0
+end
+
+contains_party =
+  Enum.map(party_regexes, fn reg ->
+    bavarian_toots_df["cleared_content"]
+    |> S.downcase()
+    |> S.to_list()
+    |> Enum.map(&Regex.match?(reg, &1))
+  end)
+
+parties_count =
+  contains_party
+  |> Enum.map(fn x -> Enum.map(x, &Bool.to_integer(&1)) end)
+  |> Nx.tensor()
+  |> Nx.sum(axes: [0])
+
+contains_single_parties =
+  parties_count
+  |> Nx.to_list()
+  |> Enum.map(&(&1 == 1))
+```
+
+```elixir
+parties_count
+|> Nx.to_list()
+|> Enum.frequencies()
+```
+
+Most posts name a single party. Very often two parties are mentioned in a single post. The other cases are much less frequent.
+
+```elixir
+mentioned_parties =
+  Enum.zip(contains_party, S.to_list(parties_df["party"]))
+  |> Enum.map(fn x -> Enum.map(elem(x, 0), &if(&1, do: elem(x, 1), else: "")) end)
+  |> Enum.zip()
+  |> Enum.map(&Tuple.to_list(&1))
+  |> Enum.map(&Enum.join(&1, ""))
+
+bavarian_toots_df = DF.put(bavarian_toots_df, "mentioned_party", mentioned_parties)
+
+single_party_toots_df = DF.mask(bavarian_toots_df, contains_single_parties)
 ```
 
 ## Classification
@@ -208,7 +320,7 @@ The modules takes a different number of maximum tokens. The language detection t
 
 lang_detect_serving =
   Bumblebee.Text.text_classification(lang_detect_model_info, lang_detect_tokenizer,
-    compile: [batch_size: 32, sequence_length: 100],
+    compile: [batch_size: 128, sequence_length: 100],
     defn_options: [compiler: EXLA]
   )
 
@@ -218,12 +330,12 @@ lang_detect_model_info.spec.max_positions
 ```elixir
 Kino.start_child({
   Nx.Serving,
-  serving: lang_detect_serving, name: LangDetextServer
+  serving: lang_detect_serving, name: LangDetectServer
 })
 ```
 
 ```elixir
-p = Nx.Serving.batched_run(LangDetextServer, cleared_posts)
+p = Nx.Serving.batched_run(LangDetectServer, S.to_list(single_party_toots_df["cleared_content"]))
 ```
 
 Each predictions is ordered by probybility. Hence always selecting the label the first language returns the most likely one.
@@ -252,7 +364,7 @@ detected_languages
 In contrast the manually set language are 92%, 6 % language (often the default) and 1.3 % nil (not specified).
 
 ```elixir
-toots_df["language"]
+single_party_toots_df["language"]
 |> S.to_list()
 |> Enum.frequencies()
 |> Enum.sort_by(&elem(&1, 1), :desc)
@@ -260,27 +372,21 @@ toots_df["language"]
 ```
 
 ```elixir
-toots_df = DF.put(toots_df, "detected_languages", detected_languages)
+single_party_toots_df = DF.put(single_party_toots_df, "detected_languages", detected_languages)
 ```
 
 From visual analysis the langauge attribute is often set wrong, as it set manually, with a given default. Often the language was set to English, when it was German or set to nil. Therefore the language has been evaluated by language detection model, which changed the language in 8.4 % of all posts.
 
 ```elixir
 reasigned_language =
-  toots_df["language"]
-  |> S.not_equal(toots_df["detected_languages"])
+  single_party_toots_df["language"]
+  |> S.not_equal(single_party_toots_df["detected_languages"])
   |> S.to_list()
-  |> Enum.map(&if &1, do: 1, else: 0)
+  |> Enum.map(&Bool.to_integer(&1))
   |> Enum.sum()
 
 reasigned_language / S.size(toots_df["language"]) * 100.0
 ```
-
-ToDo:
-
-1. Batched run -> less ram, longer texts
-
-<!-- livebook:{"break_markdown":true} -->
 
 ### German Sentiments
 
@@ -297,7 +403,7 @@ ger_sent_model_info.spec.max_positions
 ```elixir
 ger_sent_serving =
   Bumblebee.Text.text_classification(ger_sent_model_info, ger_sent_tokenizer,
-    compile: [batch_size: 64, sequence_length: 512],
+    compile: [batch_size: 128, sequence_length: 512],
     defn_options: [compiler: EXLA]
   )
 
@@ -308,7 +414,7 @@ Kino.start_child({
 ```
 
 ```elixir
-german_toots_df = DF.filter(toots_df, detected_languages == "de")
+german_toots_df = DF.filter(single_party_toots_df, detected_languages == "de")
 german_toots = S.to_list(german_toots_df["cleared_content"])
 ```
 
@@ -334,23 +440,15 @@ end
 
 ```elixir
 ger_sentiments = Enum.map(ger_predictions, fn x -> SentimentScore.score(x.predictions) end)
-DF.put(german_toots_df, "sentiment", ger_sentiments)
+german_toots_df = DF.put(german_toots_df, "sentiment", ger_sentiments)
 ```
-
-ToDo:
-
-1. batched run of sentiment analysis
-2. combine the scores as for English
-3. same todos as for English
-
-<!-- livebook:{"break_markdown":true} -->
 
 ### Englisch Sentiment
 
 The sentiment analysis on the English text works only with 130 tokens.
 
 ```elixir
-english_toots_df = DF.filter(toots_df, detected_languages == "en")
+english_toots_df = DF.filter(single_party_toots_df, detected_languages == "en")
 english_toots = S.to_list(english_toots_df["cleared_content"])
 ```
 
@@ -360,7 +458,7 @@ english_toots = S.to_list(english_toots_df["cleared_content"])
 
 english_sentiment_serving =
   Bumblebee.Text.text_classification(model_info, tokenizer,
-    compile: [batch_size: 32, sequence_length: 130],
+    compile: [batch_size: 128, sequence_length: 130],
     defn_options: [compiler: EXLA]
   )
 ```
@@ -378,13 +476,26 @@ eng_predictions = Nx.Serving.batched_run(EngSentimentServer, english_toots)
 
 ```elixir
 eng_sentiments = Enum.map(eng_predictions, fn x -> SentimentScore.score(x.predictions) end)
-DF.put(english_toots_df, "sentiment", eng_sentiments)
+english_toots_df = DF.put(english_toots_df, "sentiment", eng_sentiments)
+```
+
+```elixir
+ger_eng_toots = DF.concat_rows(german_toots_df, english_toots_df)
 ```
 
 ToDo:
 
 1. Match the sentiments to a party.
 2. Date -> calendar weeks
+
+```elixir
+dt =
+  S.to_list(ger_eng_toots["date"])
+  |> Enum.map(&elem(NaiveDateTime.from_iso8601(&1), 1))
+  |> S.from_list()
+
+ger_eng_toots = DF.put(ger_eng_toots, "date", dt)
+```
 
 ## Attribution
 
@@ -405,4 +516,27 @@ ToDo:
 ```elixir
 bavarian_instances = ~w"muenchen.social augsburg.social mastodon.bayern nuernberg.social 
 ploen.social wue.social mastodon.dachgau.social  sueden.social"
+```
+
+```elixir
+start_date = ~N[2023-08-29 00:00:01]
+```
+
+```elixir
+Vl.new(width: 500, height: 300, title: " Sentiments for the CDU")
+|> Vl.data_from_values(DF.filter(ger_eng_toots, mentioned_party == "csu" and date > ^start_date),
+  only: ["date", "sentiment", "detected_languages"]
+)
+|> Vl.layers([
+  Vl.new()
+  |> Vl.mark(:point)
+  |> Vl.encode_field(:x, "date", type: :temporal)
+  |> Vl.encode_field(:y, "sentiment", type: :quantitative)
+  |> Vl.encode_field(:color, "detected_languages", type: :nominal, title: "Detected Languages"),
+  Vl.new()
+  |> Vl.mark(:line, color: "firebrick", opacity: 0.5)
+  |> Vl.transform(loess: "sentiment", on: "date", bandwidth: 0.8)
+  |> Vl.encode_field(:x, "date", type: :temporal, title: "date")
+  |> Vl.encode_field(:y, "sentiment", type: :quantitative, title: "sentiment")
+])
 ```
