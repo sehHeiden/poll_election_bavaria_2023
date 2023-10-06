@@ -1,11 +1,19 @@
 defmodule Mastodon.WriteToDb do
+  # Load credentials from the JSON file in the config directory
+  defp load_credentials do
+    {:ok, json_data} = File.read("config/credentials.json")
+    Jason.decode!(json_data)
+  end
+
   def mastodon_to_db() do
     alias Mastodon.RequestByTag, as: Request
     import Ecto.Query
 
+    bearer = load_credentials()["bearer"]
+
     posts =
       ~w[bayern bayernwahl bayernwahl2023 wahlen wahlkampf wahlumfrage wahlen23 wahlen2023 spd csu gruene  grune gruenen grunen afd freiewaehler freiewahler fw fpd linke markussoeder markussoder soeder soder hubertaiwanger aiwanger hartmann martinhagen ebnersteiner]
-      |> Enum.map(fn tag -> Request.query(tag) end)
+      |> Enum.map(fn tag -> Enum.concat(Request.query(tag), Request.search(tag, bearer)) end)
       |> List.flatten()
 
     Request.getUser(posts)
@@ -64,6 +72,7 @@ defmodule Mastodon.WriteToDb do
       %Mastodon.Tag{}
       |> Ecto.Changeset.cast(tag, [:toot_id, :tag])
       |> Ecto.Changeset.validate_required([:toot_id, :tag])
+      |> Ecto.Changeset.unique_constraint([:toot_id, :tag])
       |> Ecto.Changeset.unique_constraint([:toot_id, :tag])
       |> Mastodon.Repo.insert()
     end)

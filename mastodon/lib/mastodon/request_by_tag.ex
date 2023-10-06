@@ -13,8 +13,21 @@ defmodule Mastodon.RequestByTag do
   """
   @spec query(String.t()) :: List.t()
   def query(tag) do
-    response = HTTPoison.get!("https://chaos.social/api/v1/timelines/tag/#{tag}")
+    response = HTTPoison.get!("https://chaos.social/api/v1/timelines/tag/#{tag}?limit=40")
     Jason.decode!(response.body)
+  end
+
+  @spec search(String.t(), String.t()) :: List.t()
+  def search(query, access_token) do
+    headers = [Authorization: "Bearer #{access_token}"]
+
+    response =
+      HTTPoison.get!(
+        "https://chaos.social/api/v2/search?q=#{query}&type=statuses&limit=40&resolve=true",
+        headers
+      )
+
+    Jason.decode!(response.body)["statuses"]
   end
 
   @spec getToot(List.t()) :: List.t()
