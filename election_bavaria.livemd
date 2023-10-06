@@ -5,8 +5,11 @@ Mix.install(
   [
     {:nx, "~>0.6.1"},
     {:bumblebee, github: :"elixir-nx/bumblebee"},
-    {:explorer, "~> 0.7"},
-    {:kino_vega_lite, "~> 0.1.7"},
+    {:explorer,
+     git: "https://github.com/elixir-explorer/explorer.git",
+     ref: "aef274989ab490b0a392ccd19ec24b286a8cda1c",
+     override: true},
+    {:kino_vega_lite, "~> 0.1.10"},
     {:httpoison, "~> 1.8"},
     {:exla, "~> 0.6.1"},
     {:adbc, "~> 0.1"}
@@ -27,18 +30,31 @@ alias Explorer.DataFrame, as: DF
 alias Explorer.Series, as: S
 ```
 
+```elixir
+start_date = ~N[2023-08-29 00:00:01]
+```
+
 Load the csv with the polls from different instiutions form the website [wahlrecht.de](https://www.wahlrecht.de/umfragen/landtage/bayern.htm#fn-bp).
 Show the timeline and trend for every party.
 
 ```elixir
 polls = DF.from_csv!("polls.csv")
+
+polls_dt =
+  S.to_list(polls["end_date"])
+  |> Enum.map(&elem(NaiveDateTime.from_iso8601(&1 <> " 00:00:01"), 1))
+  |> S.from_list()
+
+polls = DF.put(polls, "end_date", polls_dt)
 ```
 
 ```elixir
-defmodule Graphs do
-  def create_graph(data_source, title, party) do
+defmodule PollGraphs do
+  def create_graph(data_source, title, party, start_date) do
     Vl.new(width: 500, height: 300, title: title)
-    |> Vl.data_from_values(data_source, only: ["end_date", party, "institute"])
+    |> Vl.data_from_values(DF.filter(data_source, end_date > ^start_date),
+      only: ["end_date", party, "institute"]
+    )
     |> Vl.layers([
       Vl.new()
       |> Vl.mark(:point)
@@ -52,35 +68,39 @@ defmodule Graphs do
       |> Vl.encode_field(:y, party, type: :quantitative, title: "percentage")
     ])
   end
+
+  def create_graph(data_source, title, party) do
+    create_graph(data_source, title, party, ~N[2023-01-01 00:00:01])
+  end
 end
 ```
 
 ```elixir
-Graphs.create_graph(polls, "Polls - CSU", "csu")
+PollGraphs.create_graph(polls, "Polls - CSU", "csu")
 ```
 
 ```elixir
-Graphs.create_graph(polls, "Polls - Buendnis-Gruene", "gruene")
+PollGraphs.create_graph(polls, "Polls - Freie Waehler", "fw")
 ```
 
 ```elixir
-Graphs.create_graph(polls, "Polls - Freie Waehler", "fw")
+PollGraphs.create_graph(polls, "Polls - Buendnis90-Gruene", "gruene")
 ```
 
 ```elixir
-Graphs.create_graph(polls, "Polls - AFD", "afd")
+PollGraphs.create_graph(polls, "Polls - SPD", "spd")
 ```
 
 ```elixir
-Graphs.create_graph(polls, "Polls - SPD", "spd")
+PollGraphs.create_graph(polls, "Polls - FDP", "fdp")
 ```
 
 ```elixir
-Graphs.create_graph(polls, "Polls - FDP", "fdp")
+PollGraphs.create_graph(polls, "Polls - AFD", "afd")
 ```
 
 ```elixir
-Graphs.create_graph(polls, "Polls - Linke", "linke")
+PollGraphs.create_graph(polls, "Polls - Linke", "linke")
 ```
 
 ## Parties
@@ -104,10 +124,16 @@ parties_df =
 DF.print(parties_df)
 ```
 
-## Preprocessing posts for sentiment analysis
+```elixir
+parties = S.to_list(parties_df["party"])
 
-Before the sentiments can be read from the posts. It is nessescary to remove html tags.
-The mastodon tags, need to be converted to text.
+parties_regex =
+  parties
+  |> Enum.join("|")
+  |> Regex.compile!()
+```
+
+## Analysis Tags and Toots
 
 ```elixir
 # f = "./mastodon/mastodon_bayernwahl2023.db"
@@ -124,11 +150,95 @@ Adbc.download_driver!(:sqlite)
 {:ok, conn} = Kino.start_child({Adbc.Connection, database: db})
 ```
 
+```elixir
+{:ok, tags_df} = Explorer.DataFrame.from_query(conn, "select * from tags", [])
+
+tags_df["tag"]
+|> S.downcase()
+|> S.to_list()
+|> Enum.filter(&Enum.member?(parties, &1))
+|> Enum.frequencies()
+```
+
+From the original tracked posts, only a minimal set contains the names of the parties:
+
+* Freie Waehler (82)
+* Gruene (58)
+* Linke (57)
+
+This is much better for the parties. AFD, CSU and SPD.
+
 <!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
 {:ok, toots_df} = Explorer.DataFrame.from_query(conn, "select * from toots", [])
 ```
+
+```elixir
+post_number = S.size(toots_df["content"])
+```
+
+```elixir
+toots_df["content"]
+|> S.downcase()
+|> S.to_list()
+|> Enum.filter(&Regex.match?(parties_regex, &1))
+|> Enum.map(&Regex.scan(parties_regex, &1))
+|> Enum.map(&Enum.uniq(&1))
+|> List.flatten()
+|> Enum.frequencies()
+|> Enum.sort_by(&elem(&1, 1), :desc)
+|> Enum.map(fn {lang, freq} -> {lang, freq / post_number * 100.0} end)
+```
+
+This is slightly getting better, the whole posts are taken into account.
+
+* Freie Waehler (82 -> 155)
+* Grune (58 -> 169)
+* Linke (57 -> 175)
+
+```elixir
+defmodule Names do
+  def append_variants(names) do
+    names
+    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, " ", "") end))
+    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "ö", "o") end))
+    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "ö", "oe") end))
+    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "-", "") end))
+    |> Enum.uniq()
+  end
+
+  def family_name(y) do
+    String.split(y, " ", parts: 2) |> Enum.at(1)
+  end
+end
+
+candidate_family_names =
+  parties_df["candiate1"]
+  |> S.concat(parties_df["candidate2"])
+  |> S.downcase()
+  |> S.to_list()
+  |> Enum.filter(&is_binary(&1))
+  |> Enum.map(&Names.family_name(&1))
+
+candidate_family_names =
+  candidate_family_names
+  |> Names.append_variants()
+  |> Enum.join("|")
+
+bavaria_tags = Regex.compile!("bayern|csu|" <> candidate_family_names)
+```
+
+```elixir
+name_regex = Regex.compile!(candidate_family_names)
+```
+
+## Preprocessing posts for sentiment analysis
+
+Before the sentiments can be read from the posts. It is nessescary to remove html tags.
+The mastodon tags, need to be converted to text.
+
+<!-- livebook:{"break_markdown":true} -->
 
 Convert date column from string to naive date time.
 
@@ -173,6 +283,29 @@ cleared_posts = Enum.map(posts, &Regex.replace(r, &1, ""))
 toots_df = DF.put(toots_df, "cleared_content", cleared_posts)
 ```
 
+```elixir
+post_s =
+  cleared_posts
+  |> Enum.map(&String.length(&1))
+  |> Enum.filter(&(&1 > 0))
+  |> S.from_list()
+
+post_s
+|> S.mean()
+```
+
+```elixir
+post_s
+|> S.standard_deviation()
+```
+
+```elixir
+post_s
+|> S.median()
+```
+
+On the mode of the cleared posts is 205 characters in the first set (After removing the length of zero). The mean is 235+/190 character.
+
 ## Filter posts
 
 ToDo:
@@ -181,37 +314,7 @@ ToDo:
 2. Attribution of Sentiment to a single party
 3. Filter: No party, multiple parties
 
-```elixir
-defmodule Names do
-  def append_variants(names) do
-    names
-    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, " ", "") end))
-    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "ö", "o") end))
-    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "ö", "oe") end))
-    |> Enum.concat(Enum.map(names, fn x -> String.replace(x, "-", "") end))
-    |> Enum.uniq()
-  end
-
-  def family_name(y) do
-    String.split(y, " ", parts: 2) |> Enum.at(1)
-  end
-end
-
-candidate_family_names =
-  parties_df["candiate1"]
-  |> S.concat(parties_df["candidate2"])
-  |> S.downcase()
-  |> S.to_list()
-  |> Enum.filter(&is_binary(&1))
-  |> Enum.map(&Names.family_name(&1))
-
-candidate_family_names =
-  candidate_family_names
-  |> Names.append_variants()
-  |> Enum.join("|")
-
-bavaria_tags = Regex.compile!("bayern|csu|" <> candidate_family_names)
-```
+<!-- livebook:{"break_markdown":true} -->
 
 Filter: Contains at least a single cantidate.
 
@@ -309,7 +412,18 @@ Therefore a language detection has to be made first, before the sentiment analys
 
 ### Language Detection
 
-The modules takes a different number of maximum tokens. The language detection takes up to 514 tokens, but the results updates of the self set languages is similar to 100 tokens. Therefore we restrict to 100 tokens.
+The modules takes a different number of maximum characters. The language detection takes up to 514 characters, but the results updates of the self set languages is similar to 100 characters. Therefore we restrict to 100 characters.
+
+<!-- livebook:{"break_markdown":true} -->
+
+<!-- Learn more at https://mermaid-js.github.io/mermaid -->
+
+```mermaid
+flowchart TD;
+  A(XLM-RoBERTa) -->|German| B[german-sentiment_bert];
+  A(XLM-RoBERTa) -->|English| C[RoBERTa BERTtweet - Sentiment];
+
+```
 
 ```elixir
 {:ok, lang_detect_model_info} =
@@ -320,7 +434,7 @@ The modules takes a different number of maximum tokens. The language detection t
 
 lang_detect_serving =
   Bumblebee.Text.text_classification(lang_detect_model_info, lang_detect_tokenizer,
-    compile: [batch_size: 128, sequence_length: 100],
+    compile: [batch_size: 256, sequence_length: 100],
     defn_options: [compiler: EXLA]
   )
 
@@ -392,7 +506,7 @@ reasigned_language / S.size(toots_df["language"]) * 100.0
 
 <!-- livebook:{"break_markdown":true} -->
 
-The German sentiment analysis works with up to 512 tokens.
+The German sentiment analysis works with up to 512 characters. Per standard Mastodon set the limit to 500 characters. We cut the string length of the strings to µ + s, at 425 character.
 
 ```elixir
 {:ok, ger_sent_model_info} = Bumblebee.load_model({:hf, "oliverguhr/german-sentiment-bert"})
@@ -403,7 +517,7 @@ ger_sent_model_info.spec.max_positions
 ```elixir
 ger_sent_serving =
   Bumblebee.Text.text_classification(ger_sent_model_info, ger_sent_tokenizer,
-    compile: [batch_size: 128, sequence_length: 512],
+    compile: [batch_size: 256, sequence_length: 42],
     defn_options: [compiler: EXLA]
   )
 
@@ -423,14 +537,18 @@ ger_predictions = Nx.Serving.batched_run(GerSentimentServer, german_toots)
 ```
 
 ```elixir
+Enum.at(ger_predictions, 0).predictions
+```
+
+```elixir
 defmodule SentimentScore do
   def score(prediction) do
     prediction
     |> Enum.map(fn p ->
-      cond do
-        p.label == "POS" or p.label == "positive" -> p.score
-        p.label == "NEG" or p.label == "negative" -> -p.score
-        p.label == "NEU" or p.label == "neutral" -> 0
+      case p do
+        %{label: l} when l in ["POS", "positive"] -> p.score
+        %{label: l} when l in ["NEG", "negative"] -> -p.score
+        _ -> 0
       end
     end)
     |> Enum.sum()
@@ -458,7 +576,7 @@ english_toots = S.to_list(english_toots_df["cleared_content"])
 
 english_sentiment_serving =
   Bumblebee.Text.text_classification(model_info, tokenizer,
-    compile: [batch_size: 128, sequence_length: 130],
+    compile: [batch_size: 256, sequence_length: 130],
     defn_options: [compiler: EXLA]
   )
 ```
@@ -483,18 +601,72 @@ english_toots_df = DF.put(english_toots_df, "sentiment", eng_sentiments)
 ger_eng_toots = DF.concat_rows(german_toots_df, english_toots_df)
 ```
 
+```elixir
+DF.filter(ger_eng_toots, date > ^start_date)[:mentioned_party]
+|> S.to_list()
+|> Enum.frequencies()
+```
+
 ToDo:
 
 1. Match the sentiments to a party.
 2. Date -> calendar weeks
 
 ```elixir
-dt =
-  S.to_list(ger_eng_toots["date"])
-  |> Enum.map(&elem(NaiveDateTime.from_iso8601(&1), 1))
-  |> S.from_list()
+defmodule SentimentGraphs do
+  def create_graph(data_source, title, party, start_date) do
+    Vl.new(width: 500, height: 300, title: title)
+    |> Vl.data_from_values(
+      DF.filter(data_source, mentioned_party == ^party and date > ^start_date),
+      only: ["date", "sentiment", "detected_languages"]
+    )
+    |> Vl.layers([
+      Vl.new()
+      |> Vl.mark(:point)
+      |> Vl.encode_field(:x, "date", type: :temporal)
+      |> Vl.encode_field(:y, "sentiment", type: :quantitative)
+      |> Vl.encode_field(:color, "detected_languages", type: :nominal, title: "Detected Languages"),
+      Vl.new()
+      |> Vl.mark(:line, color: "firebrick", opacity: 0.5)
+      |> Vl.transform(loess: "sentiment", on: "date", bandwidth: 0.8)
+      |> Vl.encode_field(:x, "date", type: :temporal, title: "date")
+      |> Vl.encode_field(:y, "sentiment", type: :quantitative, title: "sentiment")
+    ])
+  end
+end
+```
 
-ger_eng_toots = DF.put(ger_eng_toots, "date", dt)
+```elixir
+SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the CSU", "csu", start_date)
+```
+
+```elixir
+SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the Freie Waehler", "fw", start_date)
+```
+
+```elixir
+SentimentGraphs.create_graph(
+  ger_eng_toots,
+  "Sentiments for the Buendnis90/Gruene",
+  "gruene",
+  start_date
+)
+```
+
+```elixir
+SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the SPD", "spd", start_date)
+```
+
+```elixir
+SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the FDP", "fdp", start_date)
+```
+
+```elixir
+SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the AFD", "afd", start_date)
+```
+
+```elixir
+SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the Linke", "linke", start_date)
 ```
 
 ## Attribution
@@ -516,27 +688,4 @@ ger_eng_toots = DF.put(ger_eng_toots, "date", dt)
 ```elixir
 bavarian_instances = ~w"muenchen.social augsburg.social mastodon.bayern nuernberg.social 
 ploen.social wue.social mastodon.dachgau.social  sueden.social"
-```
-
-```elixir
-start_date = ~N[2023-08-29 00:00:01]
-```
-
-```elixir
-Vl.new(width: 500, height: 300, title: " Sentiments for the CDU")
-|> Vl.data_from_values(DF.filter(ger_eng_toots, mentioned_party == "csu" and date > ^start_date),
-  only: ["date", "sentiment", "detected_languages"]
-)
-|> Vl.layers([
-  Vl.new()
-  |> Vl.mark(:point)
-  |> Vl.encode_field(:x, "date", type: :temporal)
-  |> Vl.encode_field(:y, "sentiment", type: :quantitative)
-  |> Vl.encode_field(:color, "detected_languages", type: :nominal, title: "Detected Languages"),
-  Vl.new()
-  |> Vl.mark(:line, color: "firebrick", opacity: 0.5)
-  |> Vl.transform(loess: "sentiment", on: "date", bandwidth: 0.8)
-  |> Vl.encode_field(:x, "date", type: :temporal, title: "date")
-  |> Vl.encode_field(:y, "sentiment", type: :quantitative, title: "sentiment")
-])
 ```

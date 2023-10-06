@@ -1,0 +1,47 @@
+[tool.ruff]
+select = ["ALL"]
+ignore = ["ANN101", "B905", "COM812", "COM819",
+    "D100", "D103", "D104", "D202", "D203", "D205", "D212", "D211", "D400", "D415",
+    "E501", "N999", "S101", "TRY003", "UP007", "UP038"]
+
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = []
+unfixable = []
+target-version = "py311"
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".eggs",
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".svn",
+    ".venv",
+    "__pypackages__",
+    "build",
+    "dist",
+    "venv",
+    "tests"
+]
+
+[tool.black]
+target-version = ["py311"]
+line-length=120
+
+[tool.mypy]
+ignore_missing_imports = "True"
+no_implicit_optional = "True"
+exclude = [
+    "tests",
+    ".eggs",
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".svn",
+    ".venv",
+    "__pypackages__",
+    "build",
+    "dist",
+    "venv",
+]
+python_version = "3.11"
