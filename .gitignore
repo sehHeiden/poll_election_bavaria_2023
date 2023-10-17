@@ -10,3 +10,12 @@ erl_crash.dump
 .elixir_ls/
 **.idea
 **/venv
+.stversions
+.stdfolder
+*credentials*
+*.db
+*.qmd
+/graphics/userimages/*
+*.json
+*.onnx
+.stignore
