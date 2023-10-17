@@ -4,7 +4,7 @@
 Mix.install(
   [
     {:nx, "~>0.6.1"},
-    {:bumblebee, github: :"elixir-nx/bumblebee"},
+    {:bumblebee, github: :"elixir-nx/bumblebee", override: true},
     {:explorer,
      git: "https://github.com/elixir-explorer/explorer.git",
      ref: "aef274989ab490b0a392ccd19ec24b286a8cda1c",
@@ -12,10 +12,11 @@ Mix.install(
     {:kino_vega_lite, "~> 0.1.10"},
     {:httpoison, "~> 1.8"},
     {:exla, "~> 0.6.1"},
-    {:adbc, "~> 0.1"}
+    {:adbc, "~> 0.1"},
+    {:kino_bumblebee, github: "livebook-dev/kino_bumblebee"}
   ],
   config: [
-    nx: [default_backend: EXLA.Backend]
+    nx: [default_backend: EXLA.Backend, client: :cuda, device_id: 1]
   ]
 )
 ```
@@ -38,7 +39,7 @@ Load the csv with the polls from different instiutions form the website [wahlrec
 Show the timeline and trend for every party.
 
 ```elixir
-polls = DF.from_csv!("polls.csv")
+polls = DF.from_csv!("polls.csv", delimiter: ";")
 
 polls_dt =
   S.to_list(polls["end_date"])
@@ -46,6 +47,7 @@ polls_dt =
   |> S.from_list()
 
 polls = DF.put(polls, "end_date", polls_dt)
+DF.print(DF.tail(polls, 5))
 ```
 
 ```elixir
@@ -131,6 +133,20 @@ parties_regex =
   parties
   |> Enum.join("|")
   |> Regex.compile!()
+```
+
+## Regions
+
+Names of subdistricts are removed, as the are often to general. Example: Oder, Gern.
+
+```elixir
+local_entities = DF.from_csv!("geodaten/VerwaltungsEinheit.csv", delimiter: ",")["name"]
+# subdist_entities = DF.from_csv!("geodaten/KatasterBezirk.csv", delimiter: ",")["name"]
+
+local_entities =
+  S.to_list(local_entities)
+  # |> Enum.concat(S.to_list(suburbs_entities))
+  |> Enum.map(&String.downcase(&1))
 ```
 
 ## Analysis Tags and Toots
@@ -271,12 +287,12 @@ posts =
   toots_df[:content]
   |> Explorer.Series.to_list()
 
-r =
+html_r =
   Regex.compile!(
     "<[^>]*>|#|@|_|https?:\/\/(?:www\.)?([-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b)*(\/[\/\d\w\.-]*)*(?:[\?])*(.+)*|="
   )
 
-cleared_posts = Enum.map(posts, &Regex.replace(r, &1, ""))
+cleared_posts = Enum.map(posts, &Regex.replace(html_r, &1, "  "))
 ```
 
 ```elixir
@@ -304,7 +320,7 @@ post_s
 |> S.median()
 ```
 
-On the mode of the cleared posts is 205 characters in the first set (After removing the length of zero). The mean is 235+/190 character.
+On the median of the cleared posts is 205 characters in the first set (After removing the length of zero). The mean is 235+/-190 character.
 
 ## Filter posts
 
@@ -401,7 +417,7 @@ bavarian_toots_df = DF.put(bavarian_toots_df, "mentioned_party", mentioned_parti
 single_party_toots_df = DF.mask(bavarian_toots_df, contains_single_parties)
 ```
 
-## Classification
+## Sentiment Analysis
 
 Before the sentiment analysis. The langauage has to be checked. As the language attribute is very often not correct.
 Therefore a language detection has to be made first, before the sentiment analysis
@@ -465,8 +481,8 @@ detected_languages =
   end)
 ```
 
-The majority of 96% of all saved posts are detected as german. 1.3 % are detected as English.
-Why 1 %  are detected as Thai and 0.5 % are detected as Hindi has to be find out. That 0.6 % are detected as Dutch is more plausable.
+The majority of 96% of all sample posts are detected as german. 1.6 % are detected as English.
+Why 0.9 % are labeled as Hindi has to be figured out. That 0.5 % are detected as Dutch is more plausable.
 
 ```elixir
 detected_languages
@@ -669,7 +685,7 @@ SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the AFD", "afd", sta
 SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the Linke", "linke", start_date)
 ```
 
-## Attribution
+## Attribution (Do Execute with caution)
 
 * gender
 
@@ -681,6 +697,24 @@ SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the Linke", "linke",
 
 * date -> calendar week
 
+<!-- livebook:{"break_markdown":true} -->
+
+```mermaid
+flowchart TD;
+  A(User on Bavarian Instance?) -->|yes| B[Bavarian];
+  A-->|no| C(Bavarian Location in Field?);
+  C --> |yes| B;
+  C --> |no| D(Bavarian Location in User note?)
+  D --> |yes| B;
+  D --> |no| E(Interfered Language in toot is German?);
+  E --> |yes| F[German]
+  E --> |no| G[Foreign]
+```
+
+<!-- livebook:{"break_markdown":true} -->
+
+### Mark Bavarian Instance
+
 ```elixir
 {:ok, person_df} = Explorer.DataFrame.from_query(conn, "select * from users", [])
 ```
@@ -688,4 +722,253 @@ SentimentGraphs.create_graph(ger_eng_toots, "Sentiments for the Linke", "linke",
 ```elixir
 bavarian_instances = ~w"muenchen.social augsburg.social mastodon.bayern nuernberg.social 
 ploen.social wue.social mastodon.dachgau.social  sueden.social"
+
+bavarian_instances_reg =
+  bavarian_instances
+  |> Enum.join("|")
+  |> Regex.compile!()
+```
+
+```elixir
+is_user_on_bavarian_instance =
+  person_df["user_name"]
+  |> S.downcase()
+  |> S.to_list()
+  |> Enum.map(&Enum.at(String.split(&1, "@"), 1, "chaos.social"))
+  |> Enum.map(&Regex.run(bavarian_instances_reg, &1))
+  |> Enum.map(&(&1 !== nil))
+
+person_df = DF.put(person_df, "bavarian_instance", is_user_on_bavarian_instance)
+
+bavarian_person = DF.filter(person_df, bavarian_instance == true)
+elem(DF.shape(bavarian_person), 0) / elem(DF.shape(person_df), 0) * 100
+```
+
+About 6 % of all the users are on a Bavarian instance.
+
+<!-- livebook:{"break_markdown":true} -->
+
+### Bavarian Locations in Fields
+
+```elixir
+{:ok, fields_df} = Explorer.DataFrame.from_query(conn, "select * from fields", [])
+```
+
+```elixir
+filter_field_regions_names = [
+  "adresse",
+  "born where",
+  "bundesland",
+  "city",
+  "country",
+  "heimat",
+  "heimathafen",
+  "heimatort",
+  "herkunft",
+  "home",
+  "location",
+  "ort",
+  "standort",
+  "wahlkreis",
+  "wo",
+  "wohnhaft",
+  "wohnort",
+  "wohnt in",
+  "zuhause",
+  "📍"
+]
+
+location_fields =
+  fields_df["field_name"]
+  |> S.downcase()
+  |> S.to_enum()
+  |> Enum.map(&Enum.member?(filter_field_regions_names, &1))
+
+cleaned_field =
+  fields_df["field_value"]
+  |> S.downcase()
+  |> S.to_list()
+  |> Enum.map(&Regex.replace(html_r, &1, " "))
+
+fields_df = DF.put(fields_df, "cleaned_field", cleaned_field)
+DF.print(fields_df)
+```
+
+```elixir
+bavarian_fields =
+  fields_df["cleaned_field"]
+  |> S.to_list()
+  |> Enum.map(fn a ->
+    a
+    |> String.split([",", "-"])
+    |> Enum.map(&String.trim(&1))
+    |> Enum.map(&Enum.member?(local_entities, &1))
+    |> Enum.any?()
+  end)
+
+fields_df =
+  fields_df
+  |> DF.put("locations", location_fields)
+  |> DF.put("is_bavarian", bavarian_fields)
+
+fields_with_bavarian_locations = DF.filter(fields_df, is_bavarian == true and locations == true)
+DF.print(fields_with_bavarian_locations)
+```
+
+```elixir
+elem(DF.shape(fields_with_bavarian_locations), 0) / elem(DF.shape(person_df), 0) * 100
+```
+
+About 5 % users add locations. About 0.5 % of users give locations in Bavarian.
+
+### Find bavarian locations in user texts
+
+```elixir
+cleaned_note =
+  person_df["note"]
+  |> S.to_list()
+  |> Enum.map(&if(is_binary(&1), do: &1, else: ""))
+  |> Enum.map(&Regex.replace(html_r, &1, " "))
+
+person_df = DF.put(person_df, "cleaned_note", cleaned_note)
+
+bavarian_location_in_note =
+  person_df["cleaned_note"]
+  |> S.to_list()
+  |> Enum.map(fn x ->
+    is_scanned =
+      Enum.map(local_entities, fn y ->
+        scanned = Regex.run(Regex.compile!("\\b#{y}\\b"), x)
+        if is_nil(scanned), do: 0, else: 1
+      end)
+
+    Enum.sum(is_scanned)
+  end)
+  |> Enum.map(&if(&1 > 0, do: true, else: false))
+
+person_df = DF.put(person_df, "bavarian_location_in_note", bavarian_location_in_note)
+```
+
+```elixir
+person_with_bavarian_note_locations = DF.filter(person_df, bavarian_location_in_note == true)
+
+elem(DF.shape(person_with_bavarian_note_locations), 0) / elem(DF.shape(person_df), 0) * 100
+```
+
+```elixir
+DF.print(person_with_bavarian_note_locations)
+```
+
+About 2 % of the user name Bavarian location in there user note texts.
+
+### Person in Bavaria
+
+OR the Bavarian locations in note, in fields and instance name.
+
+```elixir
+persons_with_bavarian_fields =
+  DF.join(person_df, fields_with_bavarian_locations, how: :left, on: [{"user_name", "user_name"}])
+
+DF.print(persons_with_bavarian_fields)
+```
+
+```elixir
+DF.shape(persons_with_bavarian_fields)
+```
+
+```elixir
+bavarian_users =
+  Enum.reduce(
+    [
+      persons_with_bavarian_fields["is_bavarian"],
+      persons_with_bavarian_fields["bavarian_location_in_note"],
+      persons_with_bavarian_fields["bavarian_instance"]
+    ],
+    &S.or(&1, &2)
+  )
+  |> S.to_enum()
+  |> Enum.map(&if(is_nil(&1), do: false, else: &1))
+
+persons_with_bavarian_fields =
+  DF.put(persons_with_bavarian_fields, "bavarian_users", bavarian_users)
+```
+
+```elixir
+person_from_bavaria = DF.filter(persons_with_bavarian_fields, bavarian_users == true)
+
+elem(DF.shape(person_from_bavaria), 0) / elem(DF.shape(persons_with_bavarian_fields), 0) * 100
+```
+
+About 8.14 % of the sample datasets users are estimated to be from Bavarian.
+But (6.14 % + 0.39 %  + 2.00 % =) 8.53 % is the sum of percentage per feature. Hence, there is little overlap.
+
+### Download user pics
+
+In test data set 1390 of 1547 user do have avatars. Which is about 90 % of the users.
+
+```elixir
+defmodule User do
+  def image_exists?(body), do: byte_size(body) > 478
+
+  def download_image(save_stem, link) do
+    save_name = "./graphics/userimages/#{save_stem}.png"
+
+    if not File.exists?(save_name) do
+      %HTTPoison.Response{body: body} = HTTPoison.get!(link)
+
+      if User.image_exists?(body) do
+        File.write!(save_name, body)
+      end
+    end
+  end
+end
+
+Enum.zip(
+  S.to_list(person_df["avatar"]),
+  S.to_list(person_df["user_id"])
+)
+|> Enum.map(fn {link, name} -> User.download_image(name, link) end)
+```
+
+<!-- Learn more at https://mermaid-js.github.io/mermaid -->
+
+```mermaid
+flowchart TD;
+  A(gender in fields?) -->|male| B[male];
+  A -->|female| C[female];
+  A -->|no| D(gender in user text?);
+
+  D -->|male| B;
+  D -->|female| C;
+
+  D -->|no| E(user has image?)
+
+  E -->|yes| F(image segamentatation);
+  E -->|no| H[no data]
+
+  F-->|single person| G(vgg_ilsvrc_16_gender_imdb_wiki);
+  F-->|others| H;
+
+  G-->|male| B;
+  G-->|female| C;
+```
+
+<!-- livebook:{"break_markdown":true} -->
+
+```mermaid
+flowchart TD;
+  E(user has image?) -->|yes| F(image segamentatation);
+  E-->|no| H[no data]
+
+  F-->|single person| G(vgg_ilsvrc_16_gender_imdb_wiki);
+  F-->|others| H[no data];
+
+  G--> B[age classes];
+```
+
+```elixir
+filter_field_age_names = ~w[Age Alter Born Geburtstag]
+
+filter_field_gender_names =
+  ~w[Gender Geschlecht Pronom Pronomen pronouns Pronouns Pronomina Pronoms Pronons Pronoun Sexulatität Wer pronomen pronouns]
 ```
