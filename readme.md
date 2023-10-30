@@ -143,7 +143,7 @@ This message is most precise as the fields are key value stores. Location names 
 
 The full region selection algorith is shown below.
 
-<img src="file:///F:/Basti/Studium/HSHarz/Praxisprojekt/poll_election_bavaria_2023/graphics/region_selection.png" title="" alt="" data-align="center">
+<img title="" src="./graphics/region_selection.png" alt="" data-align="center">
 
 #### Sentiment Analysis
 
@@ -169,7 +169,7 @@ The minimum of 50 characters was used, to reduce the miss classification. The la
 
 The whole language classification process is shown below.
 
-<img src="file:///F:/Basti/Studium/HSHarz/Praxisprojekt/poll_election_bavaria_2023/graphics/language_classification.png" title="" alt="" data-align="center"> 
+<img title="" src="./graphics/language_classification.png" alt="" data-align="center"> 
 
 #### Sentiment Graphs
 
@@ -185,13 +185,13 @@ For all parties most sentiments are neutral or negative. Whether positive sentim
 
 The average sentiment (loess fit) of the CSU ranges from -0.6 to -0.4.
 
-![](F:\Basti\Studium\HSHarz\Praxisprojekt\poll_election_bavaria_2023\graphics\sentiments\visualization_sentiment_csu.svg)
+![](./graphics/sentiments/visualization_sentiment_csu.svg)
 
 The average sentiment (loess fit) for the FW ranges from -0.5 to -0.4.
 
-![](F:\Basti\Studium\HSHarz\Praxisprojekt\poll_election_bavaria_2023\graphics\sentiments\visualization_sentiment_fw.svg)
+![](./graphics/sentiments/visualization_sentiment_fw.svg)
 
-The AFD was as only mentioned in two percent of all filtered posts. Therefore the data is already sparse. Therefore the average sentiment (loess fit) has a more dynamic of -0.7 to -0.1. Computing a daily, or weekly average might be more precise.![](F:\Basti\Studium\HSHarz\Praxisprojekt\poll_election_bavaria_2023\graphics\sentiments\visualization_sentiment_afd.svg)
+The AFD was as only mentioned in two percent of all filtered posts. Therefore the data is already sparse. Therefore the average sentiment (loess fit) has a more dynamic of -0.7 to -0.1. Computing a daily, or weekly average might be more precise.![](./graphics/sentiments/visualization_sentiment_afd.svg)
 
 #### Plans: Correleation poll and sentiments
 
@@ -209,7 +209,7 @@ As final differentiation the gender of each user is estimated by:
 
 Gender Classification with [Salesforce/blip-image-captioning-base · Hugging Face](https://huggingface.co/Salesforce/blip-image-captioning-base) that generates captions of images. The captions are scanned for man/woman.
 
-![](F:\Basti\Studium\HSHarz\Praxisprojekt\poll_election_bavaria_2023\graphics\gender_classification.png)
+![](./graphics/gender_classification.png)
 
 **TODO Test:** [MiVOLO]([[2307.04616v2] MiVOLO: Multi-input Transformer for Age and Gender Estimation](https://arxiv.org/abs/2307.04616v2)), [onnx Gender and Age]( https://github.com/onnx/models/tree/main/vision/body_analysis/age_gender)
 
@@ -226,5 +226,3 @@ Gender Classification with [Salesforce/blip-image-captioning-base · Hugging Fac
 [Sonntagsfrage – Umfragen Landtagswahlen (Wahlumfrage, Wahlumfragen)](https://www.wahlrecht.de/umfragen/landtage/)
 
 ## Monitoring Interruptions
-
-22 hours no update from 30.09. 22:00 to 01.10. 20:00.
