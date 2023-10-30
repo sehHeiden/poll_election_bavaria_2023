@@ -34,16 +34,16 @@ As a reference the sentiment analysis will be compared to polls. Tolls from diff
 
 The strongest party `CSU` loses about three percent points since the start of the year 2023 with an result of 37 % at the election.
 
-![Over the last year the CSU up to 4 percent points, from a high of 41 %.](./graphics/polls/visualization_csu_polls.svg "Polls - CSU")
+<img src="./graphics/polls/visualization_csu_polls.svg" title="Polls - CSU" alt="Over the last year the CSU up to 4 percent points, from a high of 41 %." data-align="center">
 
 While its coalition partner `Freie Waehler` increases by five percent points and win 15.8 % of all votes.
 
-![The FW gained 5 percent points since the start of the year.](./graphics/polls/visualization_fw_polls.svg "Polls - FW")
+<img src="./graphics/polls/visualization_fw_polls.svg" title="Polls - FW" alt="The FW gained 5 percent points since the start of the year." data-align="center">
 
 Oppostion parties as  show a trend of loosing on the lefts spectrum and gaining in the ultra right spectrum (`AFD`). As the Linke only wins less then the percent in every poll, it is not listed by every polling institue.
 
-![](./graphics/polls/visualization_gruene_polls.svg)
-![](./graphics/polls/visualization_linke_polls.svg)![](./graphics/polls/visualization_spd_polls.svg)![](./graphics/polls/visualization_fdp_polls.svg)![](./graphics/polls/visualization_afd_polls.svg)
+<img src="./graphics/polls/visualization_gruene_polls.svg" title="" alt="" data-align="center">
+<img src="./graphics/polls/visualization_linke_polls.svg" title="" alt="" data-align="center"><img src="./graphics/polls/visualization_spd_polls.svg" title="" alt="" data-align="center"><img src="./graphics/polls/visualization_fdp_polls.svg" title="" alt="" data-align="center"><img src="./graphics/polls/visualization_afd_polls.svg" title="" alt="" data-align="center">
 
  Both Linke and and FDP did not gain the minium amount of  five percent the join the state parliament.
 
@@ -185,13 +185,13 @@ For all parties most sentiments are neutral or negative. Whether positive sentim
 
 The average sentiment (loess fit) of the CSU ranges from -0.6 to -0.4.
 
-![](./graphics/sentiments/visualization_sentiment_csu.svg)
+<img src="./graphics/sentiments/visualization_sentiment_csu.svg" title="" alt="" data-align="center">
 
 The average sentiment (loess fit) for the FW ranges from -0.5 to -0.4.
 
-![](./graphics/sentiments/visualization_sentiment_fw.svg)
+<img src="./graphics/sentiments/visualization_sentiment_fw.svg" title="" alt="" data-align="center">
 
-The AFD was as only mentioned in two percent of all filtered posts. Therefore the data is already sparse. Therefore the average sentiment (loess fit) has a more dynamic of -0.7 to -0.1. Computing a daily, or weekly average might be more precise.![](./graphics/sentiments/visualization_sentiment_afd.svg)
+The AFD was as only mentioned in two percent of all filtered posts. Therefore the data is already sparse. Therefore the average sentiment (loess fit) has a more dynamic of -0.7 to -0.1. Computing a daily, or weekly average might be more precise.<img src="./graphics/sentiments/visualization_sentiment_afd.svg" title="" alt="" data-align="center">
 
 #### Plans: Correleation poll and sentiments
 
