@@ -2,13 +2,13 @@
 
 ## Introduction and Objectives
 
-[Mastodon](https://blog.joinmastodon.org/2023/10/annual-report-2022/) is a micro blogging service, that is federated by the [ActivityPub](https://en.wikipedia.org/wiki/ActivityPub) protocol and part of the fediverse. Depending on the source Mastodon 8.4 M users world wide ([fedidb](https://fedidb.org/)),  or 14.4 M users (@mastodonusercount@mastodon.social) on 30/10/2023. Because many services are able to federate with each other, it is possible to read data from other serveres as Misskey, Lemmy, Pixelfed and so on. Even some Wordpress-Blogs can be read.
+[Mastodon](https://blog.joinmastodon.org/2023/10/annual-report-2022/) is a micro blogging service, that is federated by the [ActivityPub](https://en.wikipedia.org/wiki/ActivityPub) protocol and part of the fediverse. Depending on the source Mastodon 8.4 M users world wide ([fedidb](https://fedidb.org/)),  or 14.4 M users (@mastodonusercount@mastodon.social) on Oct. 10th 2023. Because many services are able to federate with each other, it is possible to read data from other serveres as Misskey, Lemmy, Pixelfed and so on. Even some Wordpress-Blogs can be read.
 
-Mastodon has a relative high number regional servers (see [OSM - Mastodon server](https://umap.openstreetmap.fr/en/map/mastodon-near-me-global-mastodon-server-list-by-co_828094)). A high number are German.  Mastodon had a strong spike in usage in November 2022 with 2.5 M monthly recurrent users. Currently the network has still [1.7 mio](https://joinmastodon.org/servers) monthly recurrent users.
+Mastodon has a relative high number regional servers (see [OSM - Mastodon server](https://umap.openstreetmap.fr/en/map/mastodon-near-me-global-mastodon-server-list-by-co_828094)). A high number are German.  Mastodon had a strong spike in usage in Nov. 2022 with 2.5 M monthly recurrent users. Currently the network has still [1.7 mio](https://joinmastodon.org/servers) monthly recurrent users.
 
 Beside Mastodon, [X](https://developer.twitter.com/en/docs/twitter-api) was also investigated as possible source. But was excluded for monetary reasons. We will use the terms posts and toots interchangebly.
 
-We analyse Mastodon toots about the bavarian election on Oct, 8th 2023. Therefore we apply a sentiment analysis. We atempt to differentiate regions and gender.
+We analyse Mastodon toots about the bavarian election on Oct. 8th 2023. Therefore we apply a sentiment analysis. We atempt to differentiate regions and gender.
 
 ### Monitored Parties
 
@@ -69,7 +69,7 @@ Some candidates were not included, because their tags where not in used at the b
 
 A wide set of topics have been selected to retrieve a maximum of taged posts. Due to the concept of federation of instances, it is possible that not all instances share posts, or not all posts. Still only a single instance have been monitored to reduce the need of removing doublicates with different ids on each instance. 
 
-Search of posts without the need of tags, has been released during the monitoring with Mastodon version 4.2 in the end of September 2023.  It was added on October 3rd on chaos.social. Reindexing stated have been finished on October 5th. The search was added on October 7th to the monitoring.
+Search of posts without the need of tags, has been released during the monitoring with Mastodon version 4.2 in the end of Sep. 2023.  It was added on Oct. 3rd on chaos.social. Reindexing stated have been finished on Oct. 5th. The search was added on Oct. 7th to the monitoring.
 
 We retrieve the tags via the public timeline of the instance and the search via the seach api
 
@@ -79,7 +79,7 @@ We retrieve the tags via the public timeline of the instance and the search via 
 
 The search in the public timeline is done without a login, therefore only public posts are monitored. For the search a bearer token is neaded. During the addition of the search the limit of requested post was increased from 20 (default) to 40 (maximum).
 
-The posts are requested every full hour starting 08/29/23. The retrieval is done with a Elixir programm that runs on Erlang's BEAM runtime, to increase stabiliy. For instance automatic recovering after failing connections. Each post is written into four tables of a SQLite3 database. The toots table contains the post itself and some of its user data. The users table contains some data of the posts about the users, who wrote the posts.
+The posts are requested every full hour starting Aug. 29th 2023. The retrieval is done with a Elixir programm that runs on Erlang's BEAM runtime, to increase stabiliy. For instance automatic recovering after failing connections. Each post is written into four tables of a SQLite3 database. The toots table contains the post itself and some of its user data. The users table contains some data of the posts about the users, who wrote the posts.
 
 The related table fields contains the fields a user can set, to add some information about him-/herself. The related tags table contains all tags of every post.
 
@@ -87,7 +87,7 @@ The related table fields contains the fields a user can set, to add some informa
 
 #### Data Preparation
 
-The evaluation is done in an [Elixir Livebook](election_bavaria.livemd). First exploration was done on a sub-sample of the dataset, which was recored until 09/10/23. About 12 days of full records. This dataset was used to fine tune the analysis. 
+The evaluation is done in an [Elixir Livebook](election_bavaria.livemd). First exploration was done on a sub-sample of the dataset, which was recored until Sep. 10th 2023. About 12 days of full records. This dataset was used to fine tune the analysis. 
 
 Filtering is down in three stages:
 
@@ -149,11 +149,11 @@ The full region selection algorith is shown below.
 
 For the sentiment analysis at first we cleaned the texts before further filtering:
 
-- Html tags
+- Html tags.
 
-- Links 
+- Links. 
 
-- Characters #, @ and _ .
+- Characters: #, @ and _ .
 
 - Removed double spaces.
 
@@ -199,13 +199,11 @@ The AFD was as only mentioned in two percent of all filtered posts. Therefore th
 
 As final differentiation the gender of each user is estimated by:
 
-1. name
+1. User note text.
 
-2. user note text
+2. User fields.
 
-3. user fields
-
-4. user picture?
+3. User picture. (?)
 
 Gender Classification with [Salesforce/blip-image-captioning-base · Hugging Face](https://huggingface.co/Salesforce/blip-image-captioning-base) that generates captions of images. The captions are scanned for man/woman.
 
@@ -213,16 +211,6 @@ Gender Classification with [Salesforce/blip-image-captioning-base · Hugging Fac
 
 **TODO Test:** [MiVOLO](https://arxiv.org/abs/2307.04616v2), [onnx Gender and Age]( https://github.com/onnx/models/tree/main/vision/body_analysis/age_gender)
 
-## Linklist
-
-### Fediverse
-
-- [fedidb](https://fedidb.org/)
-- [OSM - Mastodon server](https://umap.openstreetmap.fr/en/map/mastodon-near-me-global-mastodon-server-list-by-co_828094)
-- [Mastodon Python API](https://mastodonpy.readthedocs.io/en/stable/07_timelines.html)
-
-### Umfragen
-
-[Sonntagsfrage – Umfragen Landtagswahlen (Wahlumfrage, Wahlumfragen)](https://www.wahlrecht.de/umfragen/landtage/)
-
 ## Monitoring Interruptions
+
+The monitoring service was interrupted on Sep. 30th 2023 for about 20 hours. The monitoring service was interrupted on Oct. 7th 2023.
