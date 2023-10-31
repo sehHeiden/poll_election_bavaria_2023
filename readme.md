@@ -30,7 +30,7 @@ Source: [Landtagswahl in Bayern 2023: Kandidaten, Themen, Termin | BR24](https:/
 
 ### Polls
 
-As a reference the sentiment analysis will be compared to polls. Tolls from different sources are listed at [wahlrecht.de]([Wahlumfragen zur Landtagswahl 2023 in Bayern (Sonntagsfrage #ltwby)](https://www.wahlrecht.de/umfragen/landtage/bayern.htm#fn-bp)). The time lime for each party for the is shown below. Fitting is done with a loess fit with a bandwith of 0.5 at the most median datetime of each poll. The result of the election is shown as `Landtagswahl`.
+As a reference the sentiment analysis will be compared to polls. Tolls from different sources are listed at [wahlrecht.de](https://www.wahlrecht.de/umfragen/landtage/bayern.htm#fn-bp). The time lime for each party for the is shown below. Fitting is done with a loess fit with a bandwith of 0.5 at the most median datetime of each poll. The result of the election is shown as `Landtagswahl`.
 
 The strongest party `CSU` loses about three percent points since the start of the year 2023 with an result of 37 % at the election.
 
@@ -159,11 +159,11 @@ For the sentiment analysis at first we cleaned the texts before further filterin
 
 The cleaned posts with more than 50 characters in the evaluation data set contains 217 (median) and 248 +/- 189 (average and standard deviation) characters. The maxium was over 5000 characters. 
 
-The posts all contain a language lable, but this is set by the user or his/her application and is therefore error prone. We detect the language by the model [***papluca/xlm-roberta-base-language-detection***]([papluca/xlm-roberta-base-language-detection · Hugging Face](https://huggingface.co/papluca/xlm-roberta-base-language-detection)) with a limit 0f 100 character. The model is included in the Livebook smart cells.
+The posts all contain a language lable, but this is set by the user or his/her application and is therefore error prone. We detect the language by the model [***papluca/xlm-roberta-base-language-detection***](https://huggingface.co/papluca/xlm-roberta-base-language-detection) with a limit 0f 100 character. The model is included in the Livebook smart cells.
 
-The german sentiment analysis is done with the model [***oliverguhr/german-sentiment-bert***]([oliverguhr/german-sentiment-bert · Hugging Face](https://huggingface.co/oliverguhr/german-sentiment-bert)). We limited the model to 437 of 512 possible characters (sum of average length and standard deviation). The model is a python package. Therefore we attempted to use is in Elixir via ONNX. The problem was the correct setting of the tokenizer (bert-base-german-cased). Therefore it was much simpler to use the Elixir library Bumblebee.
+The german sentiment analysis is done with the model [***oliverguhr/german-sentiment-bert***](https://huggingface.co/oliverguhr/german-sentiment-bert). We limited the model to 437 of 512 possible characters (sum of average length and standard deviation). The model is a python package. Therefore we attempted to use is in Elixir via ONNX. The problem was the correct setting of the tokenizer (bert-base-german-cased). Therefore it was much simpler to use the Elixir library Bumblebee.
 
-The few English language posts are evaluated with the model [***finiteautomata/bertweet-base-sentiment-analysis***]([finiteautomata/bertweet-base-sentiment-analysis · Hugging Face](https://huggingface.co/finiteautomata/bertweet-base-sentiment-analysis)) with the limit of 130 characters. 
+The few English language posts are evaluated with the model [***finiteautomata/bertweet-base-sentiment-analysis***](https://huggingface.co/finiteautomata/bertweet-base-sentiment-analysis) with the limit of 130 characters. 
 
 The minimum of 50 characters was used, to reduce the miss classification. The language detection model for example classified these as Hindi or Thai, neither was true for all posts!
 
@@ -211,7 +211,7 @@ Gender Classification with [Salesforce/blip-image-captioning-base · Hugging Fac
 
 ![](./graphics/gender_classification.png)
 
-**TODO Test:** [MiVOLO]([[2307.04616v2] MiVOLO: Multi-input Transformer for Age and Gender Estimation](https://arxiv.org/abs/2307.04616v2)), [onnx Gender and Age]( https://github.com/onnx/models/tree/main/vision/body_analysis/age_gender)
+**TODO Test:** [MiVOLO](https://arxiv.org/abs/2307.04616v2), [onnx Gender and Age]( https://github.com/onnx/models/tree/main/vision/body_analysis/age_gender)
 
 ## Linklist
 
