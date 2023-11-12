@@ -13,7 +13,9 @@ Mix.install(
     {:httpoison, "~> 1.8"},
     {:exla, "~> 0.6.1"},
     {:adbc, "~> 0.1"},
-    {:kino_bumblebee, github: "livebook-dev/kino_bumblebee"}
+    {:kino_bumblebee, github: "livebook-dev/kino_bumblebee"},
+    {:tucan, "~> 0.2.1"},
+    {:scholar, "~> 0.2.1"}
   ],
   config: [
     nx: [default_backend: EXLA.Backend, client: :cuda, device_id: 1]
@@ -35,7 +37,7 @@ alias Explorer.Series, as: S
 defmodule Graphs do
   def create_poll_graph(data_source, title, party, start_date) do
     Vl.new(width: 500, height: 300, title: title)
-    |> Vl.data_from_values(DF.filter(data_source, mid_date > ^start_date),
+    |> Vl.data_from_values(DF.filter(data_source, mid_date >= ^start_date),
       only: ["end_date", "start_date", "mid_date", party, "institute"]
     )
     |> Vl.layers([
@@ -93,6 +95,44 @@ defmodule Graphs do
       |> Vl.encode_field(:x, "date", type: :temporal, title: "date")
       |> Vl.encode_field(:y, "sentiment", type: :quantitative, title: "sentiment")
     ])
+  end
+
+  def create_daily_compare_graph(sentiment_data_source, poll_data_source, title, party) do
+    Tucan.layers([
+      Tucan.scatter(poll_data_source, "day", party, point_color: "red"),
+      Tucan.scatter(sentiment_data_source, "day", party, point_color: "green")
+    ])
+    |> Tucan.set_width(500)
+    |> Tucan.set_title(title)
+    |> Tucan.Axes.set_x_title("Day of the year")
+    |> Tucan.Axes.set_y_title("Sentiments, Polls")
+    |> Tucan.Scale.set_y_domain(0, 1)
+    |> Tucan.Legend.set_enabled(:color, true)
+    |> Tucan.Legend.set_title(:color, "TimeLine")
+    |> Tucan.annotate(243, S.max(poll_data_source[party]) + 0.05, "Polls", color: "red", size: 18)
+    |> Tucan.annotate(243, S.max(sentiment_data_source[party]) + 0.05, "Sentiments",
+      color: "green",
+      size: 18
+    )
+  end
+
+  def create_weekly_compare_graph(sentiment_data_source, poll_data_source, title, party) do
+    Tucan.layers([
+      Tucan.scatter(poll_data_source, "week", party, point_color: "red"),
+      Tucan.scatter(sentiment_data_source, "week", party, point_color: "green")
+    ])
+    |> Tucan.set_width(500)
+    |> Tucan.set_title(title)
+    |> Tucan.Axes.set_x_title("Calendar Week")
+    |> Tucan.Axes.set_y_title("Sentiments, Polls")
+    |> Tucan.Scale.set_y_domain(0, 1)
+    |> Tucan.Legend.set_enabled(:color, true)
+    |> Tucan.Legend.set_title(:color, "TimeLine")
+    |> Tucan.annotate(36, S.max(poll_data_source[party]) + 0.05, "Polls", color: "red", size: 18)
+    |> Tucan.annotate(36, S.max(sentiment_data_source[party]) + 0.05, "Sentiments",
+      color: "green",
+      size: 18
+    )
   end
 end
 ```
@@ -194,75 +234,97 @@ defmodule Text do
 end
 ```
 
+<!-- livebook:{"continue_on_error":true} -->
+
+```elixir
+defmodule CrossCorrelation do
+  def cross_corr(t1, t2) do
+    Nx.conv(t1, t2)
+  end
+
+  def full_cross_corr(t1, t2) do
+    p1 = elem(Nx.shape(t1), 2) - 1
+    p2 = elem(Nx.shape(t2), 2) - 1
+
+    Nx.conv(t1, t2, padding: [{p1, p2}])
+  end
+
+  def find_offset(t1, t2) do
+    l1 = elem(Nx.shape(t1), 2)
+
+    coeffs = full_cross_corr(t1, t2)
+    index = Nx.argmax(coeffs)
+    Nx.to_number(index) - l1 + 1
+  end
+end
+```
+
+```elixir
+defmodule DataFrameDate do
+  def fill(df, timeline_int_col, timeline_range, data_cols) do
+    timeline =
+      df[timeline_int_col]
+      |> S.to_list()
+      |> MapSet.new()
+
+    measurement_timeline = timeline_range |> MapSet.new()
+
+    missing_time = MapSet.difference(measurement_timeline, timeline)
+    missing_data = List.duplicate(nil, length(Enum.to_list(missing_time)))
+
+    missing_df =
+      (Enum.map(data_cols, fn x -> %{x => missing_data} end) ++
+         [%{timeline_int_col => missing_time}])
+      |> Enum.map(&DF.new(&1))
+      |> DF.concat_columns()
+
+    DF.concat_rows([missing_df, df])
+    |> DF.arrange_with(& &1[timeline_int_col])
+  end
+end
+```
+
+```elixir
+defmodule NilSeries do
+  def fb_fill(series) do
+    S.fill_missing(S.fill_missing(series, :forward), :backward)
+  end
+end
+```
+
 ## Polls
 
 ```elixir
 start_date = ~N[2023-08-29 00:00:01]
+start_day = start_date |> NaiveDateTime.to_date() |> Date.day_of_year()
 ```
 
 Load the csv with the polls from different instiutions form the website [wahlrecht.de](https://www.wahlrecht.de/umfragen/landtage/bayern.htm#fn-bp).
 Show the timeline and trend for every party.
 
 ```elixir
-polls = DF.from_csv!("polls.csv", delimiter: ";")
+polls =
+  DF.from_csv!("polls.csv", delimiter: ";", parse_dates: true)
+  |> DF.mutate(
+    start_date: S.cast(start_date, {:datetime, :millisecond}),
+    end_date: S.cast(end_date, {:datetime, :millisecond})
+  )
+```
 
-polls_edt =
-  S.to_list(polls["end_date"])
-  |> Enum.map(&elem(NaiveDateTime.from_iso8601(&1 <> " 00:00:01"), 1))
-  |> S.from_list()
-
-polls_sdt =
-  S.to_list(polls["start_date"])
-  |> Enum.map(&elem(NaiveDateTime.from_iso8601(&1 <> " 00:00:01"), 1))
-  |> S.from_list()
-
+```elixir
 polls_mdt =
   S.to_list(polls["end_date"])
   |> Enum.zip(S.to_list(polls["start_date"]))
   |> Enum.map(
     &NaiveDateTime.add(
-      NaiveDateTime.from_iso8601!(elem(&1, 1) <> " 00:00:01"),
-      round(
-        NaiveDateTime.diff(
-          NaiveDateTime.from_iso8601!(elem(&1, 0) <> " 00:00:01"),
-          NaiveDateTime.from_iso8601!(elem(&1, 1) <> " 00:00:01")
-        ) / 2
-      )
+      elem(&1, 1),
+      round(NaiveDateTime.diff(elem(&1, 0), elem(&1, 1)) / 2)
     )
   )
 
-polls =
-  polls
-  |> DF.put("end_date", polls_edt)
-  |> DF.put("start_date", polls_sdt)
-  |> DF.put("mid_date", polls_mdt)
-
-DF.print(DF.tail(polls, 5))
-```
-
-```elixir
-test_df =
-  DF.new(
-    start_date: [
-      ~N[2023-09-25 00:00:01],
-      ~N[2023-09-25 00:00:01],
-      ~N[2023-09-25 00:00:01],
-      ~N[2023-10-04 00:00:01]
-    ],
-    end_date: [
-      ~N[2023-09-27 00:00:01],
-      ~N[2023-09-28 00:00:01],
-      ~N[2023-10-02 00:00:01],
-      ~N[2023-10-05 00:00:01]
-    ],
-    mid_date: [
-      ~N[2023-09-26 00:00:01],
-      ~N[2023-09-26 12:00:01],
-      ~N[2023-09-28 12:00:01],
-      ~N[2023-10-04 12:00:01]
-    ],
-    col: [36, 36, 36, 37]
-  )
+polls = DF.put(polls, "mid_date", polls_mdt)
+polls = DF.mutate(polls, week: S.cast(mid_date, :date) |> S.week_of_year())
+DF.print(polls, limit: :infinity)
 ```
 
 ```elixir
@@ -375,6 +437,16 @@ This is much better for the parties: AFD, CSU and SPD.
 
 ```elixir
 {:ok, toots_df} = Explorer.DataFrame.from_query(conn, "select * from toots", [])
+toots_df = DF.mutate(toots_df, date: S.strptime(date, "%Y-%m-%dT%H:%M:%S"))
+
+toots_df =
+  toots_df
+  |> DF.mutate(
+    day: S.cast(date, :date) |> S.day_of_year(),
+    week: S.cast(date, :date) |> S.week_of_year(),
+    weekday: S.cast(date, :date) |> S.day_of_week(),
+    hour: S.hour(date)
+  )
 ```
 
 ```elixir
@@ -745,15 +817,6 @@ The mastodon tags, need to be converted.
 
 Convert date column from string to naive date time.
 
-```elixir
-dt =
-  S.to_list(toots_df["date"])
-  |> Enum.map(&elem(NaiveDateTime.from_iso8601(&1), 1))
-  |> S.from_list()
-
-toots_df = DF.put(toots_df, "date", dt)
-```
-
 <!-- livebook:{"reevaluate_automatically":true} -->
 
 ```elixir
@@ -787,18 +850,15 @@ post_length_s
 ```
 
 ```elixir
-post_length_s
-|> S.standard_deviation()
+S.standard_deviation(post_length_s)
 ```
 
 ```elixir
-post_length_s
-|> S.median()
+S.median(post_length_s)
 ```
 
 ```elixir
-post_length_s
-|> S.max()
+S.max(post_length_s)
 ```
 
 On the median of the cleared posts is 248 characters in the first set (After removing the length of zero). The mean is 217+/-189 character.
@@ -975,7 +1035,7 @@ flowchart TD;
 
 lang_detect_serving =
   Bumblebee.Text.text_classification(lang_detect_model_info, lang_detect_tokenizer,
-    compile: [batch_size: 256, sequence_length: 100],
+    compile: [batch_size: 128, sequence_length: 100],
     defn_options: [compiler: EXLA]
   )
 
@@ -1030,7 +1090,7 @@ single_party_toots_df["language"]
 |> Enum.map(fn {lang, freq} -> {lang, freq / length(detected_languages) * 100.0} end)
 ```
 
-From visual analysis the langauge attribute is often set wrong, as it set manually, with a given default. Often the language was set to English, when it was German or set to nil. Therefore the language has been evaluated by language detection model, which changed the language in 8.4 % of all posts.
+From visual analysis the langauge attribute is often set wrong, as it set manually, with a given default. Often the language was set to English, when it was German or set to nil. Therefore the language has been evaluated by language detection model, which changed the language in 5.6 % of all posts.
 
 ```elixir
 reasigned_language =
@@ -1046,7 +1106,7 @@ reasigned_language / S.size(single_party_toots_df["language"]) * 100.0
 
 <!-- livebook:{"break_markdown":true} -->
 
-The German sentiment analysis works with up to 512 characters. Per standard Mastodon set the limit to 500 characters. We cut the string length of the strings to µ + s, at 437 character.
+The German sentiment analysis works with up to 512 characters. Per standard Mastodon set the limit to 500 characters. As other services than Mastodon and some Mastodon instances use other cut offs, we select 512 characters.
 
 ```elixir
 {:ok, ger_sent_model_info} = Bumblebee.load_model({:hf, "oliverguhr/german-sentiment-bert"})
@@ -1057,7 +1117,7 @@ ger_sent_model_info.spec.max_positions
 ```elixir
 ger_sent_serving =
   Bumblebee.Text.text_classification(ger_sent_model_info, ger_sent_tokenizer,
-    compile: [batch_size: 256, sequence_length: 437],
+    compile: [batch_size: 128, sequence_length: 512],
     defn_options: [compiler: EXLA]
   )
 
@@ -1100,7 +1160,7 @@ english_toots = S.to_list(english_toots_df["cleared_content"])
 
 english_sentiment_serving =
   Bumblebee.Text.text_classification(model_info, tokenizer,
-    compile: [batch_size: 256, sequence_length: 130],
+    compile: [batch_size: 128, sequence_length: 130],
     defn_options: [compiler: EXLA]
   )
 ```
@@ -1133,6 +1193,7 @@ bav_ger_eng_lang =
   |> Enum.map(&if(is_nil(elem(&1, 1)), do: elem(&1, 0), else: "bav"))
 
 ger_eng_toots = DF.put(ger_eng_toots, "region", bav_ger_eng_lang)
+DF.print(ger_eng_toots)
 ```
 
 ```elixir
@@ -1211,12 +1272,429 @@ Graphs.create_sentiment_graph(ger_eng_toots, "Sentiments for the Linke", "linke"
 TODO:
 
 1. cross correlation
-2. ~add bavarian~
-3. ~test changed party filter~
-4. ~strange languages?~ -> min cleared post length set to 50 characters.
-5. emojies?
-6. ~update markdown~
-7. add min/max dates for sentiment graphs
+2. emojies?
+3. add min/max dates for sentiment graphs
 
 4 nl posts -> error,
 1 fr post -> correct
+
+## Comparision Polls and Sentiments
+
+```elixir
+normalized_timeline =
+  ger_eng_toots
+  |> DF.filter(date >= ^start_date)
+  |> DF.select(["domentent_party", "sentiment", "day", "id"])
+  |> DF.mutate(sentiment: (sentiment + 1) / 2)
+  |> DF.pivot_wider("domentent_party", "sentiment", id_columns: ["id", "day"])
+  |> DF.discard(["id"])
+
+sentiment_timeline =
+  normalized_timeline
+  |> DF.group_by("day")
+  |> DF.mutate(
+    csu: mean(csu),
+    spd: mean(spd),
+    fw: mean(fw),
+    fdp: mean(fdp),
+    afd: mean(afd),
+    gruene: mean(gruene),
+    linke: mean(linke)
+  )
+  |> DF.select(["day", "afd", "csu", "fdp", "fw", "gruene", "linke", "spd"])
+  |> DF.distinct()
+  |> DF.arrange(asc: day)
+
+DF.print(sentiment_timeline)
+```
+
+<!-- livebook:{"continue_on_error":true} -->
+
+```elixir
+filtered_polls = DF.filter(polls, start_date >= ^start_date)
+
+polls_timeline =
+  DF.mutate(filtered_polls,
+    start_day: S.day_of_year(start_date),
+    end_day: S.day_of_year(end_date)
+  )
+```
+
+```elixir
+polls_timeline =
+  polls_timeline
+  |> DF.to_rows()
+  |> Enum.with_index()
+  |> Enum.flat_map(fn {row, index} ->
+    row["start_day"]..row["end_day"]
+    |> Enum.map(&Map.merge(row, %{"day" => &1, "index" => index}))
+  end)
+  |> DF.new()
+  |> DF.select(["day", "afd", "csu", "fdp", "fw", "gruene", "linke", "spd"])
+  |> DF.group_by("day")
+  |> DF.mutate(
+    csu: mean(csu) / 100,
+    spd: mean(spd) / 100,
+    fw: mean(fw) / 100,
+    fdp: mean(fdp) / 100,
+    afd: mean(afd) / 100,
+    gruene: mean(gruene) / 100,
+    linke: mean(linke) / 100
+  )
+  |> DF.arrange(asc: day)
+  |> DF.distinct()
+
+DF.print(polls_timeline, limit: :infinity)
+```
+
+Align the End dates of Polls and Sentiments.
+
+```elixir
+end_day = Enum.min([S.max(polls_timeline["day"]), S.max(sentiment_timeline["day"])])
+
+sentiment_timeline = DF.filter(sentiment_timeline, day <= ^end_day)
+polls_timeline = DF.filter(polls_timeline, day <= ^end_day)
+```
+
+```elixir
+lang_toots = DF.filter(ger_eng_toots, day <= ^end_day) |> DF.filter(day >= ^start_day)
+
+Tucan.concat([
+  Tucan.histogram(lang_toots, "day", relative: true, step: 1) |> Tucan.Axes.set_x_title("Day"),
+  Tucan.histogram(lang_toots, "weekday", relative: true) |> Tucan.Axes.set_x_title("Weekday"),
+  Tucan.histogram(lang_toots, "hour", relative: true, step: 1) |> Tucan.Axes.set_x_title("Hour")
+])
+|> Tucan.set_title("Post frequencies on different time scales")
+```
+
+Fill in missing data.
+
+* Dates not yet included
+* Dates included but no data measured.
+
+```elixir
+days_range = start_day..end_day
+parties = ["csu", "spd", "fw", "fdp", "afd", "gruene", "linke"]
+polls_timeline = DataFrameDate.fill(DF.ungroup(polls_timeline), "day", days_range, parties)
+
+sentiment_timeline =
+  DataFrameDate.fill(DF.ungroup(sentiment_timeline), "day", days_range, parties)
+
+DF.print(sentiment_timeline, limit: :infinity)
+```
+
+```elixir
+DF.print(polls_timeline, limit: :infinity)
+```
+
+```elixir
+polls_timeline =
+  polls_timeline
+  |> DF.ungroup()
+  |> DF.arrange(day)
+  |> DF.mutate(
+    csu: NilSeries.fb_fill(csu),
+    spd: NilSeries.fb_fill(spd),
+    fw: NilSeries.fb_fill(fw),
+    fdp: NilSeries.fb_fill(fdp),
+    afd: NilSeries.fb_fill(afd),
+    gruene: NilSeries.fb_fill(gruene),
+    linke: NilSeries.fb_fill(linke)
+  )
+
+sentiment_timeline =
+  sentiment_timeline
+  |> DF.ungroup()
+  |> DF.arrange(day)
+  |> DF.mutate(
+    csu: NilSeries.fb_fill(csu),
+    spd: NilSeries.fb_fill(spd),
+    fw: NilSeries.fb_fill(fw),
+    fdp: NilSeries.fb_fill(fdp),
+    afd: NilSeries.fb_fill(afd),
+    gruene: NilSeries.fb_fill(gruene),
+    linke: NilSeries.fb_fill(linke)
+  )
+```
+
+### Parties with enough Sentiment samples
+
+```elixir
+Graphs.create_daily_compare_graph(sentiment_timeline, polls_timeline, "Sentiment - CSU", "csu")
+```
+
+```elixir
+Graphs.create_daily_compare_graph(sentiment_timeline, polls_timeline, "Sentiment - FW", "fw")
+```
+
+```elixir
+Graphs.create_daily_compare_graph(sentiment_timeline, polls_timeline, "Sentiment - AFD", "afd")
+```
+
+### Parties with few Sentiment Samples
+
+```elixir
+Graphs.create_daily_compare_graph(
+  sentiment_timeline,
+  polls_timeline,
+  "Sentiment - Buendis90 Gruene",
+  "gruene"
+)
+```
+
+```elixir
+Graphs.create_daily_compare_graph(sentiment_timeline, polls_timeline, "Sentiment -  SPD", "spd")
+```
+
+```elixir
+Graphs.create_daily_compare_graph(sentiment_timeline, polls_timeline, "Sentiment - FDP", "fdp")
+```
+
+```elixir
+Graphs.create_daily_compare_graph(
+  sentiment_timeline,
+  polls_timeline,
+  "Sentiment - Linke",
+  "linke"
+)
+```
+
+## Cross Correlation
+
+```elixir
+party_sentiment_offset = fn sentiment_df, poll_df, party_str ->
+  sentiments_t = S.to_tensor(sentiment_df[party_str]) |> Nx.new_axis(0) |> Nx.new_axis(0)
+  polls_t = S.to_tensor(poll_df[party_str]) |> Nx.new_axis(0) |> Nx.new_axis(0)
+
+  CrossCorrelation.find_offset(sentiments_t, polls_t)
+end
+```
+
+```elixir
+party_sentiment_offset.(sentiment_timeline, polls_timeline, "csu")
+```
+
+```elixir
+party_sentiment_offset.(sentiment_timeline, polls_timeline, "fw")
+```
+
+```elixir
+party_sentiment_offset.(sentiment_timeline, polls_timeline, "afd")
+```
+
+## Correlation Sentiment --> Polls
+
+```elixir
+longer_sentiment_timeline =
+  sentiment_timeline
+  |> DF.select(["day", "afd", "csu", "fw"])
+  |> DF.pivot_longer(["afd", "csu", "fw"])
+```
+
+```elixir
+longer_polls_timeline =
+  polls_timeline
+  |> DF.select(["day", "afd", "csu", "fw"])
+  |> DF.pivot_longer(["afd", "csu", "fw"])
+```
+
+```elixir
+daily_polls_sentiment_df =
+  DF.new(
+    day: longer_sentiment_timeline["day"],
+    sentiment: longer_sentiment_timeline["value"],
+    poll: longer_polls_timeline["value"],
+    party: longer_polls_timeline["variable"]
+  )
+
+daily_polls_sentiment_df = DF.mutate(daily_polls_sentiment_df, party: S.cast(party, :category))
+```
+
+```elixir
+Tucan.scatter(daily_polls_sentiment_df, "sentiment", "poll", color_by: "party")
+|> Tucan.set_width(500)
+|> Tucan.set_height(300)
+|> Tucan.set_title("Dependency of Poll results from Sentiment.")
+|> Tucan.Axes.set_x_title("Sentiment")
+|> Tucan.Axes.set_y_title("Poll")
+|> Tucan.Scale.set_y_domain(0.1, 0.40)
+|> Tucan.Scale.set_x_domain(0, 1)
+```
+
+```elixir
+split = round(elem(DF.shape(daily_polls_sentiment_df), 0) * 0.7)
+daily_polls_sentiment_shuffled_df = DF.shuffle(daily_polls_sentiment_df)
+polls_sentiment_df_train = DF.slice(daily_polls_sentiment_shuffled_df, 0..split)
+```
+
+```elixir
+polls_sentiment_df_test = DF.slice(daily_polls_sentiment_shuffled_df, split..-1)
+```
+
+```elixir
+get_one_hot = fn x, y ->
+  x
+  |> S.cast(:category)
+  |> S.to_tensor()
+  |> Scholar.Preprocessing.one_hot_encode(num_classes: y)
+end
+
+get_sentiment = fn x ->
+  x
+  |> S.to_tensor()
+  |> Nx.reshape({:auto, 1})
+end
+```
+
+```elixir
+party_train = get_one_hot.(polls_sentiment_df_train["party"], 3)
+party_test = get_one_hot.(polls_sentiment_df_test["party"], 3)
+
+sentiments_train = get_sentiment.(polls_sentiment_df_train["sentiment"])
+sentiments_test = get_sentiment.(polls_sentiment_df_test["sentiment"])
+
+x_train = Nx.concatenate([party_train, sentiments_train], axis: 1)
+x_test = Nx.concatenate([party_test, sentiments_test], axis: 1)
+```
+
+```elixir
+y_train = polls_sentiment_df_train["poll"] |> S.to_tensor()
+y_test = polls_sentiment_df_test["poll"] |> S.to_tensor()
+
+model = Scholar.Linear.RidgeRegression.fit(x_train, y_train)
+```
+
+```elixir
+y_hat = Scholar.Linear.RidgeRegression.predict(model, x_test)
+Scholar.Metrics.Regression.r2_score(y_test, y_hat)
+```
+
+Summary:
+
+* intercept:  0.2214
+* afd:       -0.0729
+* csu:        0.1320
+* fw:        -0.0591
+* sentiment: -0.0030
+
+Meaning:
+
+* Almost not depending on (daily) Sentiment! Better Sentiment worse Poll results!?
+* afd: 14.9 %
+* csu: 35.3 %
+* fw:  16.2 %
+
+<!-- livebook:{"branch_parent_index":10} -->
+
+## Comparision: Weekly Sentiments and Polls
+
+```elixir
+normalized_weeks =
+  ger_eng_toots
+  |> DF.filter(date >= ^start_date)
+  |> DF.select(["domentent_party", "sentiment", "week", "id"])
+  |> DF.mutate(sentiment: (sentiment + 1) / 2)
+  |> DF.pivot_wider("domentent_party", "sentiment", id_columns: ["id", "week"])
+  |> DF.discard(["id"])
+
+sentiment_weeks =
+  normalized_weeks
+  |> DF.group_by("week")
+  |> DF.mutate(
+    csu: mean(csu),
+    spd: mean(spd),
+    fw: mean(fw),
+    fdp: mean(fdp),
+    afd: mean(afd),
+    gruene: mean(gruene),
+    linke: mean(linke)
+  )
+  |> DF.select(["week", "afd", "csu", "fdp", "fw", "gruene", "linke", "spd"])
+  |> DF.distinct()
+  |> DF.arrange(asc: week)
+
+DF.print(sentiment_weeks)
+```
+
+```elixir
+poll_weeks =
+  polls
+  |> DF.filter(mid_date > ^start_date)
+  |> DF.select(["week", "afd", "csu", "fdp", "fw", "gruene", "linke", "spd"])
+  |> DF.group_by("week")
+  |> DF.mutate(
+    afd: mean(afd) / 100,
+    csu: mean(csu) / 100,
+    fdp: mean(fdp) / 100,
+    fw: mean(fw) / 100,
+    gruene: mean(gruene) / 100,
+    linke: mean(linke) / 100,
+    spd: mean(spd) / 100
+  )
+  |> DF.distinct()
+  |> DF.ungroup()
+
+DF.print(poll_weeks, limit: :infinity)
+```
+
+```elixir
+end_week = Enum.min([S.max(poll_weeks["week"]), S.max(sentiment_weeks["week"])])
+start_week = Enum.max([S.min(poll_weeks["week"]), S.min(sentiment_weeks["week"])])
+
+poll_weeks = DF.filter(poll_weeks, week <= ^end_week)
+```
+
+```elixir
+sentiment_weeks = DF.filter(sentiment_weeks, week <= ^end_week)
+```
+
+```elixir
+filled_poll_weeks =
+  DataFrameDate.fill(poll_weeks, "week", start_week..end_week, [
+    "afd",
+    "csu",
+    "fdp",
+    "fw",
+    "gruene",
+    "linke",
+    "spd"
+  ])
+
+filled_sentiment_weeks =
+  DataFrameDate.fill(sentiment_weeks, "week", start_week..end_week, [
+    "afd",
+    "csu",
+    "fdp",
+    "fw",
+    "gruene",
+    "linke",
+    "spd"
+  ])
+```
+
+```elixir
+Graphs.create_weekly_compare_graph(
+  filled_sentiment_weeks,
+  filled_poll_weeks,
+  "Sentiment - CSU",
+  "csu"
+)
+```
+
+```elixir
+Graphs.create_weekly_compare_graph(
+  filled_sentiment_weeks,
+  filled_poll_weeks,
+  "Sentiment - FW",
+  "fw"
+)
+```
+
+```elixir
+Graphs.create_weekly_compare_graph(
+  filled_sentiment_weeks,
+  filled_poll_weeks,
+  "Sentiment - AFD",
+  "afd"
+)
+```
