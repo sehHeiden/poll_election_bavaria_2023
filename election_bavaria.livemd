@@ -1106,7 +1106,7 @@ reasigned_language / S.size(single_party_toots_df["language"]) * 100.0
 
 <!-- livebook:{"break_markdown":true} -->
 
-The German sentiment analysis works with up to 512 characters. Per standard Mastodon set the limit to 500 characters. As other services than Mastodon and some Mastodon instances use other cut offs, we select 512 characters.
+The German sentiment analysis works with up to 512 tokens. Per standard Mastodon set the limit to 500 characters. As other services than Mastodon and some Mastodon instances use other cut offs, we select 512 tokens. We assume [5.99 characters per word](https://www.duden.de/sprachwissen/sprachratgeber/Durchschnittliche-Lange-eines-deutschen-Wortes). [OpenAI estimates](https://platform.openai.com/tokenizer) 4 characters per tokens on a English word.
 
 ```elixir
 {:ok, ger_sent_model_info} = Bumblebee.load_model({:hf, "oliverguhr/german-sentiment-bert"})
