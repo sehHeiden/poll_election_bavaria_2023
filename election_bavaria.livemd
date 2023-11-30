@@ -1212,6 +1212,14 @@ DF.print(ger_eng_toots)
 ```
 
 ```elixir
+h =
+  bav_ger_toots
+  |> DF.filter(region == "bav")
+
+S.distinct(h["user_id"])
+```
+
+```elixir
 DF.filter(bav_ger_toots, date > ^start_date)[:domentent_party]
 |> S.to_list()
 |> Enum.frequencies()
@@ -1880,6 +1888,29 @@ Graphs.create_weekly_compare_graph(
 )
 ```
 
+### Cross Correlation
+
+```elixir
+party_sentiment_offset = fn sentiment_df, poll_df, party_str ->
+  sentiments_t = S.to_tensor(sentiment_df[party_str]) |> Nx.new_axis(0) |> Nx.new_axis(0)
+  polls_t = S.to_tensor(poll_df[party_str]) |> Nx.new_axis(0) |> Nx.new_axis(0)
+
+  CrossCorrelation.find_offset(sentiments_t, polls_t)
+end
+```
+
+```elixir
+party_sentiment_offset.(filled_sentiment_weeks, filled_poll_weeks, "afd") |> dbg()
+party_sentiment_offset.(filled_sentiment_weeks, filled_poll_weeks, "csu") |> dbg()
+party_sentiment_offset.(filled_sentiment_weeks, filled_poll_weeks, "fdp") |> dbg()
+party_sentiment_offset.(filled_sentiment_weeks, filled_poll_weeks, "fw") |> dbg()
+party_sentiment_offset.(filled_sentiment_weeks, filled_poll_weeks, "gruene") |> dbg()
+party_sentiment_offset.(filled_sentiment_weeks, filled_poll_weeks, "spd") |> dbg()
+party_sentiment_offset.(filled_sentiment_weeks, filled_poll_weeks, "linke") |> dbg()
+```
+
+### Linear Fit
+
 ```elixir
 alias Scholar.Linear.LinearRegression, as: LR
 alias Scholar.Metrics.Regression, as: RegMetrics
@@ -1887,7 +1918,7 @@ alias Scholar.Preprocessing
 ```
 
 ```elixir
-DF.print(filled_sentiment_weeks)
+DF.print(filled_sentiment_weeks, limit: :infinity)
 ```
 
 ```elixir
@@ -2005,3 +2036,23 @@ Meaning:
 * gruene: 13.9 %
 * linke:   1.3 %
 * spd:     8.5 %
+
+<!-- livebook:{"break_markdown":true} -->
+
+### Compare with average of that time frame
+
+```elixir
+filled_poll_weeks
+|> DF.mutate(
+  afd: S.mean(afd),
+  csu: S.mean(csu),
+  fdp: S.mean(fdp),
+  fw: S.mean(fw),
+  gruene: S.mean(gruene),
+  linke: S.mean(linke),
+  spd: S.mean(spd)
+)
+|> DF.discard(["week"])
+|> DF.distinct()
+|> DF.print()
+```
