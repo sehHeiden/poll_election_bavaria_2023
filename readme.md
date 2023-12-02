@@ -4,7 +4,9 @@
 
 [Mastodon](https://blog.joinmastodon.org/2023/10/annual-report-2022/) is a micro blogging service, that is federated by the [ActivityPub](https://en.wikipedia.org/wiki/ActivityPub)
 protocol and part of the fediverse. Depending on the source Mastodon 8.4 M users world wide ([fedidb](https://fedidb.org/)),  or 14.4 M users (@mastodonusercount@mastodon.social)
-both on Oct. 10th 2023. Because many services (and their instances) are able to federate with each other, it is possible to read posts from other services as Misskey,
+both on Oct. 10th 2023.
+A study by the national German TV stations [ARD and ZDF](https://www.ard-zdf-onlinestudie.de/files/2023/MP_26_2023_Onlinestudie_2023_Social_Media.pdf) shows, that about two percent of all Germans are weekly recurring Mastodon users. Two percvent of both men and women. This means about 1.7 mil weekly recurring users from Germany.
+Mastodon reaches up to three percent for those aged 14 to 49. Because many services (and their instances) are able to federate with each other, it is possible to read posts from other services as Misskey,
 Lemmy, Pixelfed and so on. Even some Wordpress-Blogs can be read.
 
 Mastodon instances are often centered around a topic or a region.
@@ -12,10 +14,10 @@ There is a relative high number regional instances  (see [OSM - Mastodon server]
 A high number are German.  Mastodon had a strong spike in usage in Nov. 2022 with 2.5 M monthly recurrent users. Currently the network has still [1.7 mil.](https://joinmastodon.org/servers) monthly recurrent users.
 We analyse Mastodon toots with the topic Bavaria state election which took place on Oct. 8th 2023. We apply a sentiment analysis. We attempt to differentiate regions into Bavaria and other German.
 
-We use the sentiment and frequency of mentioned persons and parties. We do not consider followers, favorisation, reblogs or replies. In addition we only did not try to monitor [voting intention](https://www.sciencedirect.com/science/article/pii/S0740624X21000940).
+We use the sentiment and frequency of mentioned persons and parties. We do not consider favorisation, reblogs or replies. In addition we only did not try to monitor [voting intention](https://www.sciencedirect.com/science/article/pii/S0740624X21000940).
 Beside Mastodon, [X](https://developer.twitter.com/en/docs/twitter-api) was also investigated as possible source. But was excluded for
 [monetary reasons](https://www.heise.de/news/API-Zugriff-nur-gegen-Geld-Ueber-100-Forschungsprojekte-zu-X-Twitter-gestoppt-9355078.html?wt_mc=sm.red.ho.mastodon.mastodon.md_beitraege.md_beitraege).
-We will use the terms posts and toots interchangebly. One limiting issue is the sample size of users, that use these services. The other is demographics.
+We will use the terms posts and toots interchangeably. We call a user that wrote a peticular post a author. One limiting issue is the sample size of users, that use these services. The other is demographics.
 
 ### Monitored Parties
 
@@ -37,7 +39,7 @@ Source: [Landtagswahl in Bayern 2023: Kandidaten, Themen, Termin | BR24](https:/
 
 ## Bavaria Demographics
 
-Bavaria has about 13.3 mi. inhabitants and slightly more woman (50.5 %) [Bevölkerung in den Gemeinden Bayerns nach Altersgruppen und Geschlecht](https://www.statistik.bayern.de/mam/produkte/veroffentlichungen/statistische_berichte/a1310c_202200.pdf).
+Bavaria has about 13.3 mil. inhabitants and slightly more woman (50.5 %) [Bevölkerung in den Gemeinden Bayerns nach Altersgruppen und Geschlecht](https://www.statistik.bayern.de/mam/produkte/veroffentlichungen/statistische_berichte/a1310c_202200.pdf).
 This is due to the age distribution of its citizen, caused by a higher mortability rate of man at higher ages. The peer group aged 40 to 50 is the first one with more than 50 % women.
 All younger peer groups show an surplus of men by two to five percent. On the other hand, the peer group of age 75 or older shows a surplus of women of about 17 %.
 
@@ -56,7 +58,7 @@ Some candidates were not included, because their name were not used as tags at t
 
 A wide set of topics have been selected to retrieve a maximum of tagged posts. Due to the concept of federation of instances, it is possible that not all instances share posts, or not all posts. Still only a single instance have been monitored to reduce the need of removing duplicates with different ids on each instance.
 
-Search of posts without the need of tags, has been released during the monitoring with Mastodon version 4.2 in the end of Sep. 2023.  It was added on Oct. 3rd on chaos.social. Reindexing stated have been finished on Oct. 5th. We added search on Oct. 7th to the monitoring.
+Search of posts without the need of tags, has been released during the monitoring with Mastodon version 4.2 in the end of Sep. 2023.  It was added on Oct. 3rd on chaos.social. Reindexing stated have been finished on Oct. 5th. We added search on Oct. 7th to the monitoring. The end date of data generation was Nov. 19th 2023.
 
 We retrieve the tags via the public timeline of the instance and the search via the search api
 
@@ -91,16 +93,16 @@ The decision whether a post can be used for further Analysis is done by filterin
 
 The regional filter accepts any post that abides to any of the the three rules
 
-1) Post must name of any local entity.
-2) Post must name of any candidate.
-3) Post must name csu (single regional party).
+1) (Raw) Post must name of any local entity.
+2) (Raw) Post must name of any candidate.
+3) (Raw) Post must name csu (single regional party).
 
 We use 3890 local entities from the state name down to village names. We do not use the 7860 sub-district names, as they amount is much higher as and includes some major common German words (e.g. Gern, Oder).
 Is also partially true for villages names, (e.g. Wald). This filter method, may also keep posts which mention similar names, in other regions of the world.
 
 ### Attribute Sentiment to Party
 
-To select posts, that's sentiment can me attributed to a party we test two methods:
+To select (raw) posts, that's sentiment can me attributed to a party we test two methods:
 
 1) Keep posts, that only name a single party, or their candidate(s).
 2) Keep posts, that contains a dominant party, that is mentioned more often than, all other party combined.
@@ -108,7 +110,7 @@ To select posts, that's sentiment can me attributed to a party we test two metho
 #### Spatial Differentiation
 
 Based on [OSM - Mastodon server](https://umap.openstreetmap.fr/en/map/mastodon-near-me-global-mastodon-server-list-by-co_828094) Mastodon instances are estimated to be used by Bavarian users (see Appendix). We added sueden.social based on the untested hypothesis, that the overall sentiment in southern Germany is similar to Bavaria.
-In addition the fields and notes of each user are scanned for Bavarian location names [OpenData Geodaten Bayern](https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=verwaltung) from the state name down to village name (as desribed above).
+In addition the fields and notes of each user are scanned for Bavarian location names [OpenData Geodaten Bayern](https://geodaten.bayern.de/opengeodata/OpenDataDetail.html?pn=verwaltung) from the state name down to village name (as described above).
 
 This method is precise as the fields are key value stores. Location names that are common German words will not be misunderstood, but location with same names, but in different regions are kept. When filtering by the user text, we can not filter by the keys above, but rely on the entity names alone. The full region selection algorithm is shown below.
 
@@ -119,7 +121,7 @@ This method is precise as the fields are key value stores. Location names that a
 The minimum of 50 characters was used, to reduce the miss classification, that may happen on shorter texts. The posts all contain a language label, but this is set by the user or his/her application and is therefore error prone.  We detect the language by the model [***papluca/xlm-roberta-base-language-detection***](https://huggingface.co/papluca/xlm-roberta-base-language-detection) with a limit 0f 100 tokens.
 The model is included in the Livebook smart cells.
 
-The german sentiment analysis is done with the model [***oliverguhr/german-sentiment-bert***](https://huggingface.co/oliverguhr/german-sentiment-bert). We use the limit of 512 possible tokens of the model. We only use the first 512 tokens and do not combine the analysis of multiple sections of the text. 512 tokens is far longer than the maximum post length of mastodon of 500 characters as default. [OPENAI](https://platform.openai.com/tokenizer) estimates 4 characters per token, but this figure does very per language and tokenizer. The German Sentiment Bert model is available as a python package.
+The German sentiment analysis is done with the model [***oliverguhr/german-sentiment-bert***](https://huggingface.co/oliverguhr/german-sentiment-bert). We use the limit of 512 possible tokens of the model. We only use the first 512 tokens and do not combine the analysis of multiple sections of the text. 512 tokens is far longer than the maximum post length of mastodon of 500 characters as default. [OPENAI](https://platform.openai.com/tokenizer) estimates 4 characters per token, but this figure does very per language and tokenizer. The German Sentiment Bert model is available as a python package.
 Therefore we attempted to use is in Elixir via ONNX. The problem was the correct setting of the tokenizer (bert-base-german-cased). Therefore, we applied the alternative to use the Elixir library Bumblebee.
 
 The English language posts are evaluated with the model [***finiteautomata/bertweet-base-sentiment-analysis***](https://huggingface.co/finiteautomata/bertweet-base-sentiment-analysis) with the limit of 130 tokens.
@@ -170,9 +172,9 @@ Opposition parties as  show a trend of loosing on the lefts spectrum and gaining
 
 Both `Linke` and `FDP` did not meet the quorum of five percent. We therefore decided to omit the graphs.
 Overall the fit of polls for each party is at most one percent of the final result.
-The last polls before the election we conducted by Forschungsgruppe Wahlen and INSA.
-Forschungsgruppe Wahlen shows an average error per party of 0.87 percent points and INSA 0.73 percentage points.
-The larger error for Forschungsgruppe Wahlen is caused because they did not add a estimation for `Die Linke`.
+The last polls before the election we conducted by `Forschungsgruppe Wahlen` and `INSA`.
+`Forschungsgruppe Wahlen` shows an average error per party of 0.87 percent points and `INSA` 0.73 percentage points.
+The larger error for `Forschungsgruppe Wahlen` is caused because they did not add a estimation for `Die Linke`.
 
 ### Posts
 
@@ -180,13 +182,23 @@ In the *sub-sample* the cleaned posts with more than 50 characters in the evalua
 While in the full sample this changes to 281 ± 358 with a maximum of over 19000 characters and a median of 228 characters.
 As only German words were selected as search terms, the amount of English posts are very limited. Which might also be enhanced by the regional nature of the election.
 From the two methods of attribution sentiment towards a party, a) keeping only posts that mention only one single party or there candidates, or b) keeping posts that have a dominant party (or its candidates), that are mentioned *more* than 50 % of the times.
-After applying all filters to the *sub-sampled* dataset we either keep 39 % of all posts (method a), or 49 % of all posts (method b). The connection between post and party is more clear with method a), but we choose the method b), as more posts are preserved.
+After applying all filters to the *sub-sampled* dataset we either keep 39 % of all posts (method a), or 49 % of all posts (method b).
+The connection between post and party is more clear with method a), but we choose the method b), as more posts are preserved.
+In addition we changed from Regional and Party filter based on the cleared posts, to the raw posts. Cleaning removes *some* tags, which are only included as html-Code. This enables us to keep 58 % percent of the posts of the *sub-Sample*.
 Of the *sub-sample* dataset we thus label 8.1 % of posts as Bavarian. 6.14 % due the uses instance, 0.4 % due to a Bavarian location a user field and 2.0 % due to a Bavarian location name in the user notes.
 The *sub-samples* contains 2126 toots of which we estimates 207 as Bavarian and 1902 as other German.
 
-In the *full sample* 307 users (3.88 % percent) are from Bavaria. 2.68 % percent due to instance, 0.17 % due to user fields and 1.19 % due to user notes.
-In contrast, when we only consider posts that were kept after filtering: we keep 141 (8.5 %) Bavarian users and 1514 other German users.
-We thus label of all posts we kept after filtering: 445 toots (9.5 %) as Bavarian
+|                      | Sub-Sample | Full Sample |
+|---------------------:|-----------:|------------:|
+| Total Count          |       4563 |       33142 |
+| Topic: Bavaria       |       3363 |       10001 |
+| With dominant Party  |       2627 |        5763 |
+| Bavarian Authors     |        249 |         549 |
+| Other German Authors |       2255 |        4921 |
+
+In the *full sample* 307 users (3.88 % percent) are from Bavaria. 2.68 % percent due to instance, 0.18 % due to user fields and 1.19 % due to user notes.
+In contrast, when we only consider posts that were kept after filtering: we keep 160 (8.9 %) Bavarian users and 1628 other German users.
+We thus label of all posts we kept after filtering: 549 toots (10.0 %) as Bavarian
 and 4235 toots as other German.
 Although more than 15 % of German inhabitants are Bavarian.
 
@@ -211,49 +223,51 @@ The `AFD` was as mentioned in twelve percent of all filtered posts. The the loes
 
 <img src="./graphics/sentiments/visualization_sentiment_afd.svg" title="" alt="" data-align="center">
 
-The count of mentioned parties over the full filtered sample sample is listed in the table below:
+The count of mentioned parties over the full filtered sample is listed in the table below.
+Beside the percentage based ony the full count of toots, we also show the the percentage
+of all posts weighted by the count of followers of the author of each post.
+Finally, we also show the percentage posts by Bavarian users.
 
-| Party  | Percentage | Support Bavaria | Percentage Bavaria | Election Result |
-| ------ | ----------:| ---------------:| ------------------:| ---------------:|
-| AFD    | 11.5 %     | 37              | 14.6 %             | 14.6 %          |
-| CSU    | 36.6 %     | 176             | 38.6 %             | 37.0 %          |
-| FDP    | 1.7 %      | 6               | 1.3 %              | 3.0 %           |
-| FW     | 43.9 %     | 214             | 46.9 %             | 15.8 %          |
-| Gruene | 1.4 %      | 4               | 0.9 %              | 14.4 %          |
-| Linke  | 1.3 %      | 9               | 2.0 %              | 1.5 %           |
-| SPD    | 3.6 %      | 10              | 2.2 %              | 8.4 %           |
+| Party  | Percentage | Percentage Followers | Percentage Bavaria | Election Result |
+| ------ | ----------:| --------------------:| ------------------:| ---------------:|
+| AFD    | 11.7 %     | 18.4 %               | 11.0 %             | 14.6 %          |
+| CSU    | 30.7 %     | 28.5 %               | 32.6 %             | 37.0 %          |
+| FDP    | 1.9 %      | 0.7 %                | 1.3 %              | 3.0 %           |
+| FW     | 47.7 %     | 45.3 %               | 49.1 %             | 15.8 %          |
+| Gruene | 3.0 %      | 1.2 %                | 1.8 %              | 14.4 %          |
+| Linke  | 1.3 %      | 1.7 %                | 1.8 %              | 1.5 %           |
+| SPD    | 3.7 %      | 4.1 %                | 2.1 %              | 8.4 %           |
 
-These Percentages are near the election result of the `CSU`, `Linke`, but very different for the `Freie Waehler`.
+These Percentages are 30 percent points to high for `Freie Waehler`.
 Therefore, we estimate the same data again, but only within the time period of
 doy 260 (Sep. 17th) to 280 (Oct. 7th). After the Aiwanger affair calmed down to the day before the election.
 
-| Party  | Percentage | Support Bavaria | Percentage Bavaria | Election Result |
-| ------ | ----------:| ---------------:| ------------------:| ---------------:|
-| AFD    | 19.8 %     | 10              | 12.5 %             | 14.6 %          |
-| CSU    | 51.6 %     | 43              | 53.8 %             | 37.0 %          |
-| FDP    | 1.3 %      | 0               | ---  %             | 3.0 %           |
-| FW     | 19.8 %     | 20              | 20.0 %             | 15.8 %          |
-| Gruene | 2.5 %      | 2               | 2.5 %              | 14.4 %          |
-| Linke  | 0.7 %      | 1               | 1.25 %             | 1.5 %           |
-| SPD    | 4.2 %      | 4               | 5.0 %              | 8.4 %           |
+| Party  | Percentage | Percentage Followers | Percentage Bavaria | Election Result |
+| ------ | ----------:| --------------------:| ------------------:| ---------------:|
+| AFD    | 20.6 %     | 46.9 %               | 17.3 %             | 14.6 %          |
+| CSU    | 45.3 %     | 30.5 %               | 42.7 %             | 37.0 %          |
+| FDP    | 1.3 %      | 0.3 %                |  0.9 %             | 3.0 %           |
+| FW     | 21.6 %     | 14.9 %               | 28.2 %             | 15.8 %          |
+| Gruene | 5.9 %      | 4.1 %                |  6.4 %             | 14.4 %          |
+| Linke  | 0.7 %      | 0.0 %                |  0.9 %             | 1.5 %           |
+| SPD    | 4.6 %      | 3.2 %                |  3.6 %             | 8.4 %           |
 
-This increases the accuracy for the `AFD`, `FW`, `Linke` and `SPD`, but in contrast we now strongly overestimate the `CSU` and still strongly underestimate the `Gruene` party, and have no data on the `FDP` in Bavaria.
-Finally, we add the condition to only keep the most positive posts per user. This closer to a voting intent.  We still overestimate the `CSU` and `FW`. The results for the `Gruene`, and `SPD` got better, while the results for the `AFD` is more different to the election result. All this filtering results in very small supports.
+This increases the accuracy for the `FW`, and `SPD`, but still strongly underestimate the `Gruene` party.
+Finally, we add the condition to only keep the most positive posts per user. This is closer to a voting intent.  We still overestimate the `CSU` and `FW`. All this filtering results in very small supports for Bavarian authors.
 
-| Party  | Percentage | Support Bavaria | Percentage Bavaria | Election Result |
-| ------ | ----------:| ---------------:| ------------------:| ---------------:|
-| AFD    | 17.8 %     | 4               | 8.2 %              | 14.6 %          |
-| CSU    | 51.6 %     | 25              | 51.0 %             | 37.0 %          |
-| FDP    | 1.3 %      | 0               | ---  %             | 3.0 %           |
-| FW     | 20.0 %     | 13              | 26.5 %             | 15.8 %          |
-| Gruene | 3.2 %      | 2               | 4.1 %              | 14.4 %          |
-| Linke  | 1.3 %      | 1               | 2.0 %              | 1.5 %           |
-| SPD    | 4.8 %      | 4               | 8.2 %              | 8.4 %           |
+| Party  | Percentage | Percentage Followers | Percentage Bavaria | Election Result |
+| ------ | ----------:| --------------------:| ------------------:| ---------------:|
+| AFD    | 18.7 %     | 43.2 %               | 16.1 %             | 14.6 %          |
+| CSU    | 45.9 %     | 31.1 %               | 38.1 %             | 37.0 %          |
+| FDP    | 1.0 %      | 0.7 %                | ---  %             | 3.0 %           |
+| FW     | 22.0 %     | 14.1 %               | 30.6 %             | 15.8 %          |
+| Gruene | 6.4 %      | 2.0 %                | 8.1 %              | 14.4 %          |
+| Linke  | 1.4 %      | 0.3 %                | 1.6 %              | 1.5 %           |
+| SPD    | 4.6 %      | 8.8 %                | 4.8 %              | 8.4 %           |
 
-All this filtering for Bavaria does not result in much more precise results.
-Filtering out early data generally result in more precise data, except for the `CSU`.
-
-Filtering for Bavaria corrects the result parties with smaller support. But only result in less pronounced changes for the `CSU` und `FW`.
+When using a weighted mean based on the follower count of the authors, we get a strong bias towards the `AFD`.
+The average error per party is well above the other methods tested here.
+Removing Data Before the Aiwanger affair, reduced the average error per party from about 8 to 9 percentage points, to 5 percentage points. Using the most positive Sentiment per author, again reduced the error to 4.4 to 4.7 percentage points. We could reduce the error to 4.4 percentage points when we filter for Bavarian users, but the difference to other German users with 4.7 is low.
 
 ### Compare Sentiments and Polls
 
@@ -283,20 +297,21 @@ The graph, that compares the polling result to the sentiments, shows that the ma
 
 The offset of the cross correlation for the timelines for all parties is zero. 
 
-As the predict is already grouped into calendar week, we do not estimate the difference between Bavarian an other German posts, in order not not again reduce the support. For the calendar week 40 (week of the election) the sentiment based election prediction is shown below. This approach strongly overestimates smaller and left wing parties. The prediction of all parties are much closer to each other. In addition to the bare sentiment for KW we apply a linear fit between the polls and the weekly sentiment $ S_p $ for the last six election week.
-The parties are one-hot encoded. Hence, the sum of the intersection and the slope for the party, can be seen as intercept for each party. The dependency is much stronger on the party. The slope for the sentiment is only 0.0284. The r²-score on the test dataset is 0.998. The fit for calendar week 40, is shown in the table below.
-The average error is 0.35 percentage points. This is less than half of the error of the last polls
-of Forschungsgruppe Wahlen and INSA. This is slightly better than the average error over all polls, which is 0.39.
+As the predict is already grouped into calendar week, we do not estimate the difference between Bavarian an other German posts, in order to not again reduce the support. For the calendar week 40 (week of the election) the sentiment based election prediction is shown below. This approach strongly overestimates smaller and left wing parties. The prediction of all parties are much closer to each other. In addition to the bare sentiment for KW we apply a linear fit between the polls and the weekly sentiment $ S_p $ for the last six election week.
+The parties are one-hot encoded. Hence, the sum of the intersection and the slope for the party, can be seen as intercept for each party. The dependency is much stronger on the party. The slope for the sentiment is only 0.024.
+Which means, that in the model the Sentiment only accounts for a maximum of 2.4 Percentage points. Everthing else is depending on the party itself. r²-score on the test dataset is 0.997. The fit for calendar week 40, is shown in the table below.
+The average error is 0.40 percentage points. This is less than the error of the last polls
+of `Forschungsgruppe Wahlen` and `INSA`. This is about the average error over all polls of the last six weeks, which is 0.39.
 
 | Party  | Sentiment KW 40 | Average Polls | Fit KW 40 | Election Result |
 | ------ | ---------------:| -------------:| ---------:| ---------------:|
-| AFD    | 15.3            | 13.9 %        | 13.8 %    | 14.6 %          |
-| CSU    | 15.2            | 36.4 %        | 36.5 %    | 37.0 %          |
-| FDP    | 13.2            | 3.4 %         | 3.2 %     | 3.0 %           |
-| FW     | 12.6            | 16.0 %        | 16.1 %    | 15.8 %          |
-| Gruene | 20.6            | 14.6 %        | 14.5 %    | 14.4 %          |
-| Linke  | 8.4             | 1.4 %         | 1.5 %     | 1.5 %           |
-| SPD    | 14.3            | 9.0 %         | 9.0 %     | 8.4 %           |
+| AFD    | 15.8            | 13.9 %        | 14.1 %    | 14.6 %          |
+| CSU    | 15.4            | 36.4 %        | 36.4 %    | 37.0 %          |
+| FDP    | 12.7            | 3.4 %         | 3.4 %     | 3.0 %           |
+| FW     | 13.7            | 16.0 %        | 16.2 %    | 15.8 %          |
+| Gruene | 19.2            | 14.6 %        | 14.6 %    | 14.4 %          |
+| Linke  | 8.4             | 1.4 %         | 1.4 %     | 1.5 %           |
+| SPD    | 14.7            | 9.0 %         | 9.0 %     | 8.4 %           |
 
 ## Discussion
 
@@ -327,6 +342,7 @@ On average removing the time period of the affair reduces the average error from
 The variance between the predictions from the Bavarian posts, compared to other German posts is about 0.83 percentage points. But there is no clear benefit of selecting Bavarian posts only. As there predictions is sometimes worse.
 
 In the end, the frequency based approach favour parties with higher post frequencies `CSU` and `FW`.  Considering the sentiment based method we can see, that the weekly sentiment for the parties `CSU`, `FW` and `AFD` are very similar in the region above 0.25 to 0.35. This is also true for the other parties as `SPD`. The sentiment for the `Buendis 90 / Gruene` is 0.1 higher. 
+Filtering by the most positive mentioned party per author, did not lead to better results. We assume, that while not all parties are mentioned per user, the true vote intent is still hidden, as we might select a neutral post, or the least negative mentioned party instead.
 
 The [language selection model](https://huggingface.co/papluca/xlm-roberta-base-language-detection) lists a F1-score of 0.967 for German and 1.000 for English. The [German language Sentiment model](https://huggingface.co/oliverguhr/german-sentiment-bert) lists an overall F1-micro score of 0.9639.  The [English language Sentiment model](https://arxiv.org/abs/2106.09462) lists an F1-score of 0.72.
 Still, the models can not detect sarcasm, as this needs a lot of background knowledge and is considered a different task in [text mining](https://arxiv.org/abs/2106.09462).
@@ -341,11 +357,12 @@ We see strong problem for using Mastodon as a basis for polling (regional) elect
 We assume, that for national elections Mastodon might be a better data source.
 The number of toots in regional election was low. We only got a high number of posts during the Aiwanger affair, which bias the frequencies for each party.
 
-In additional we assume, that he user pool is not representative is for the  demographics of Germany or any German state. We therefore propose a two layered
+In additional we assume, that he user pool is not representative is for the demographics of Germany or any German state. We therefore propose a two layered
 strategy to mitigate this, by a weighted average of the user data.
 We propose, that gender, can be extracted from user data, as user name, user fields and user texts. For users, that do not share this information we propose an image classification.
 Similar we propose an image classification to retrieve the age of the users. For images with no person or multiple persons, we assume an random gender and
-a random age (drown from the image/user statistic). We than could compare the demographics to [Bavarian Census](https://www.statistik.bayern.de/mam/produkte/veroffentlichungen/statistische_berichte/a1310c_202200.pdf).
+a random age (drown from the image/user statistic). Some models for the age an gender classification are listed [here](https://paperswithcode.com/sota/age-and-gender-classification-on-adience) and also in the [ONNX model zoo](https://github.com/onnx/models/tree/main/vision/body_analysis/age_gender).
+We than could compare the demographics to [Bavarian Census](https://www.statistik.bayern.de/mam/produkte/veroffentlichungen/statistische_berichte/a1310c_202200.pdf).
 
 ### Appendix
 
@@ -389,8 +406,7 @@ Following keys are used for the user fields:
 
 #### Monitoring Interruptions
 
-The monitoring service was interrupted on Sep. 30th 2023 for about 20 hours. The monitoring service was interrupted on Oct. 7th 2023. In addition monitoring was interrupted for updates on Oct. 7th.
-A longer interruption took place from Oct. 28th to 31th and lasted about 85 hours.
+The monitoring service was interrupted on Sep. 30th 2023 for about 20 hours,  on Oct. 7th 2023 for the update. A longer interruption took place from Oct. 28th to 31th and lasted about 85 hours.
 
 #### Tech stack
 
@@ -401,5 +417,3 @@ Cron is utilised to hourly trigger the api calls with Quantum.
 The data evaluation is done with the Nx framework. The first version of Nx was released 01/06/2022. Nx enables the numerical computation in Elixir and is used for Machine Learning (Scholar) and Deep Learning libraries (Axon). For instance with an EXLA compiler as backed.
 The packages are still in development and sometimes, new functions and fixes, were just released during the project.
 For instance the week_of_year function was created for [this project](https://elixirforum.com/t/missing-functions-in-explorer-dataframes-series/58448/6).
-We use the github versions of bumblebee and kino_bumblebee as they include a fix in batched_run. The graphs are created with vegalite with the vega_lite and tucan  libraries.
-The dataframe is read in with adbc into explorer, which is a wrapper around Pola-rs. We use the git version "aef274989ab490b0a392ccd19ec24b286a8cda1c" as Series.week_of_year() is not included in the point releases yet.
