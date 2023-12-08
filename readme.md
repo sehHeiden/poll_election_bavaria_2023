@@ -210,7 +210,7 @@ In the *full sample* 307 users (3.88 % percent) are from Bavaria: 2.68 % percent
 Most posts (91.5 %) where self-labelled as German, while after language classification we revaluate to 97.7 % of the posts are written in German. About 6 % percent of the posts are relabel. Mostly from the language settings: "en", `nil` and "en-us". We assume, that this are standard setting of the posting tools, that have not been changed.
 
 The selected German and Bavarian posts where mainly posted during day time, with two peek times, at noon and late afternoon (considering time zones). The time is recorded in UTC. While Sunday shows a higher frequency of tooting, the other weekdays share similar frequencies. The days with the highest frequencies are the 247th day of the year (Sept 4th) and the election day (Oct 8th).  In general we observe more posts during the Aiwanger affair, than around the election day. The frequencies kept decreasing after the election.
-<img title="Frequency on posting on the scales, weekday, hour and doy." src="./graphics/sentiments/visualization_valid_posts_frequency.svg" alt="The graphs is split into three parts. Each shows the post frequency, left for the days, center for the Weekdays and right for the Hours." data-align="center">
+<img title="Frequency on posting on the scales, weekday, hour and day of the year." src="./graphics/sentiments/visualization_valid_posts_frequency.svg" alt="The graphs is split into three parts. Each shows the post frequency, left for the days, center for the Weekdays and right for the Hours." data-align="center">
 
 ### Sentiments
 
@@ -244,7 +244,7 @@ of all posts weighted by the count of followers of each author. Finally, we also
 
 These Percentages are 30 percent points too high for `Freie Waehler`.
 Therefore, we estimate the same data again, but only within the time period from
-day of the year (doy) 260 (Sep. 17th) to 280 (Oct. 7th), after the Aiwanger affair calmed down to the day before the election.
+day of the year 260 (Sep. 17th) to 280 (Oct. 7th), after the Aiwanger affair calmed down to the day before the election.
 
 | Party  | Percentage | Percentage Followers | Percentage Bavaria | Election Result |
 | ------ | ----------:| --------------------:| ------------------:| ---------------:|
@@ -257,7 +257,7 @@ day of the year (doy) 260 (Sep. 17th) to 280 (Oct. 7th), after the Aiwanger affa
 | SPD    | 4.6 %      | 3.2 %                | 3.6 %              | 8.4 %           |
 
 This increases the accuracy for the `FW`, and `SPD`, but still strongly underestimates the `Gruene` party.
-Finally, we add the condition to only keep the most positive posts per user. This is closer to a voting intent.  We still overestimate the `CSU` and `FW`. All this filtering results in very small supports for Bavarian authors.
+Finally, we add the condition to only keep the most positive posts per user. This is closer to a voting intent. We still overestimate the `CSU` and `FW`. All this filtering results in very small supports for Bavarian authors.
 
 | Party  | Percentage | Percentage Followers | Percentage Bavaria | Election Result |
 | ------ | ----------:| --------------------:| ------------------:| ---------------:|
@@ -269,7 +269,7 @@ Finally, we add the condition to only keep the most positive posts per user. Thi
 | Linke  | 1.4 %      | 0.3 %                | 1.6 %              | 1.5 %           |
 | SPD    | 4.6 %      | 8.8 %                | 4.8 %              | 8.4 %           |
 
-We estimate the frequencies when scaling, the number of posts, which the follower count of its authors. Here, we get a strong bias towards the `AFD`.  The average error per party is well above the other methods tested here.
+We estimate the frequencies when scaling the number of posts, which the follower count of its authors. Here, we get a strong bias towards the `AFD`.  The average error per party is well above the other methods tested here.
 Removing data before the Aiwanger affair reduced the average error per party from the range of 8 to 9 percentage points, to 5 percentage points. Using the most positive sentiment per author again reduced the error to 4.4 (Bavaria) to 4.7 (other German regions) percentage points.
 
 ### Compare Sentiments and Polls
@@ -278,18 +278,18 @@ $$
 S_n(party) = \frac{S(party) + 1}{2}
 $$
 
-The sentiment is shifted from the range -1 to 1 to the range 0 to 1.  The sentiment of the posts where aggregated for the same day or calendar week, with the mean function. Missing values are filled forward filled first and than backward filled.
+The sentiment is shifted from the range -1 to 1 to the range 0 to 1.  The sentiment of the posts were aggregated for the same day or calendar week, with the mean function. Missing values are first filled forward first and than backward.
 
 $$
 S_p (party) =  \frac{S_n(party)}{∑_{party} S_n} 
 $$
 
-Than the sentiment is converted into a ratio of sentiment per party by the sum of the sentiments of all parties for the same week. This is used as a measure, to correct the sentiment by how well, the sentiment of other parties is in the same time period. When comparing the daily aggregate and the weekly aggregate, we can see, that the variance is much higher for the sentiment compared to the polls. This is strongly reduced by the weekly aggregates.
+Than the sentiment is converted into a ratio of sentiment per party by the sum of the sentiments of all parties for the same week. This is used as a measure to correct the sentiment by how well the sentiment of other parties is in the same time period. When comparing the daily aggregate and the weekly aggregate, we can see, that the variance is much higher for the sentiment compared to the polls. This is strongly reduced by the weekly aggregates.
 
 <img title="" src=".\graphics\comparision\visualization_fw_daily_compare.svg" alt="Compary Daily Timelines Polls and Sentiments for FW" width="490" data-align="inline">
 <img src=".\graphics\comparision\visualization_fw_weekly_compare.svg" title="" alt="Compary Weekly Timelines Polls and Sentiments for FW" width="490" data-align="inline">
 
-We would underestimate the result of the `CSU`, at any given point in time. The result for the `AFD` is relative close, while we overestimate smaller parties.
+We would underestimate the result of the `CSU` at any given point in time. The result for the `AFD` is relative close, while we overestimate smaller parties.
 
 <img src=".\graphics\comparision\visualization_afd_weekly_compare.svg" title="" alt="Compary Weekly Timelines Polls and Sentiments for AFD" width="490" data-align="inline">
 <img src=".\graphics\comparision\visualization_csu_weekly_compare.svg" title="" alt="Compary Weekly Timelines Polls and Sentiments for CSU" width="490" data-align="inline">
@@ -300,8 +300,8 @@ The graph, that compares the polling result to the sentiments, shows that the ma
 
 The offset of the cross correlation for the timelines for all parties is zero. 
 
-As the predict is already grouped into calendar week, we do not estimate the difference between Bavarian an other German posts, in order to not again reduce the support. For the calendar week 40 (week of the election) the sentiment based election prediction is shown below. This approach strongly overestimates smaller parties. The prediction of all parties are much closer to each other. In addition to the bare sentiment for calendar week 40 we apply a linear fit between the polls and the weekly sentiment $ S_p $ for the last six election week.
-The parties are one-hot encoded. Hence the slope for each party, can be seen as intercept for each party itself. The dependency is much stronger on the party. The slope for the sentiment is only 0.024. Which means, that in the model the sentiment only accounts for a maximum of 2.4 percentage points. Everything else is depending on the party itself. r²-score on the test dataset is 0.997. The fit for calendar week 40, is shown in the table below.
+As the predict is already grouped into calendar weeks, we do not estimate the difference between Bavarian an other German posts, in order to not again reduce the support. For the calendar week 40 (week of the election) the sentiment based election prediction is shown below. This approach strongly overestimates smaller parties. The predictions of all parties are much closer to each other. In addition to the bare sentiment for calendar week 40, we apply a linear fit between the polls and the weekly sentiment $ S_p $ for the last six election weeks.
+The parties are one-hot encoded. The dependency on the party is much stronger on, than on the sentiment. The slope for the sentiment is only 0.024. Which means, that in the model the sentiment only accounts for a maximum of 2.4 percentage points. Everything else is depending on the party itself. r²-score on the test dataset is 0.997. The fit for calendar week 40 is shown in the table below.
 The average error for the fitted result is 0.40 percentage points. This is less than the error of the last polls
 of `Forschungsgruppe Wahlen` and `INSA`. This is about the average error over all polls of the last six weeks, which is 0.39.
 
@@ -317,51 +317,51 @@ of `Forschungsgruppe Wahlen` and `INSA`. This is about the average error over al
 
 ## Discussion
 
-Each poll has at least a sample size of 1000 people. In contrast we monitor posts. It does reach a figure of more than 1000 other German users per week, but only 120 Bavarian users per week, which results very likely in an unrepresentative sampling. The number of English language toots is to low, and therefore omitted.
-In the full sample this extends to only 549 Bavarian toots and 4921 other German. Especially the addition of search increases the samples from the parties `Buendis 90 / Gruene`, `SPD` and `FDP` and `Linke`. Most toots about the `FW` are made at the start of the sampling period, when the [Anti-Semitic pamphlet](https://en.wikipedia.org/wiki/Hubert_Aiwanger) affair was the main topic of the election.
+Each poll has at least a sample size of 1000 people. In contrast, we monitor posts. It does reach a figure of more than 1000 other German users per week, but only 120 Bavarian users per week, which results very likely in an unrepresentative sampling. The number of English language toots is too low, and therefore omitted.
+In the full sample this extends to only 549 Bavarian toots and 4921 other German posts. Especially the addition of search increases the samples for the parties `Buendis 90 / Gruene`, `SPD` and `FDP` and `Linke`. Most toots about the `FW` are made at the start of the sampling period, when the [Anti-Semitic pamphlet](https://en.wikipedia.org/wiki/Hubert_Aiwanger) affair was the main topic of the election.
 The number of posts we evaluated is very low. The ability to distinguish the Bavarian posts from other German posts is very limited. The differences that are shown in the frequencies thus have limited information value.
 
-Polls show, that changes in results are in the scale of weeks. The changes in polls results have to be larger than the resolution of the polls. The resolution is about ± 1 %.
-We do not know, the assumed errors of each poll, party combination. The poll results show, that several months are needed to show changes in poll results that are large enough, compared to this error.
+The changes in polls results have to be larger than the resolution and error of the polls themselves. The resolution given by the source is 1 %. We do not know, the assumed errors of each poll, party combination. The polls show the slow changes in the result for each party. This in turn increase the time frame needed to amount changes, that are well above the resolution.
 
-Given that a smooth interpolation between two polls show high correlation to the real results: longer timelines have to be measured, that span several months. Daily sentiment analysis shows more noise than poll results, weekly/monthly aggregated have to used.  This might be due, the higher number of samples on longer time frames, but also due to the fact that sentiments are not voting intentions. While daily changes in politics might show strong reactions in sentiment, we assume voting intentions might shift only on a longer time period.
+Daily sentiment analysis shows more noise than poll results, weekly/monthly aggregated have to used.  This might be due to the higher number of samples on longer time frames, but also to the fact that sentiments are not voting intentions. While daily changes in politics might show strong reactions in sentiment, we assume that voting intentions might only shift on a longer time period.
 
-Only for few parties we have extracted enough samples. Especially for the parties `SPD`, `Buendis 90/ Gruene` and `FDP`, that govern at the federal level. Thus, sentiment analysis on a national scale is more promising. 
+We have a lower count of samples for the parties `SPD`, `Buendis 90/ Gruene` and `FDP`, that govern at the federal level. Thus, sentiment analysis on a national scale is more promising.
 
 We tried to predict election result with two different versions:
 
 1) Frequency based,
 2) Sentiment based.
 
-The frequency based version favoured the `FW` strongly above their election result by about 30 percentage points.  After removing all mentions in the period of the Aiwanger affair, this effect could be greatly reduced. We still strongly favour the `FW`, 14 to 20 percentage points above their potential. This might be due to the strongly local factor in the party. We assume it is less overshadowed by national politics as other parties.
+The frequency based version favoured the `FW` strongly above their election result by about 30 percentage points.  After removing all mentions in the period of the Aiwanger affair, this effect could be greatly reduced. We still strongly favour the `FW`, 14 to 20 percentage points above their potential. This might be due to the strongly local factor of the party. We assume that it is less overshadowed by national politics as other parties.
 
-When we compare the error of the predicted election result to the election result,
-get an average error of four to nine percentage points per party.  The best predictions is made by most positive post by Bavarian authors estimates between Sep. 17th  and Oct. 7th. For the highest sentiment per user with an average error of 4.4 percentage points. This is done to emulate the voting intent. We assume, that the voting intent can be better emulated, when we filter out below average sentiment.
+When we compare the error of the predicted election result to the actual election result, we get an average error of four to nine percentage points per party.  The best prediction is made by most positive post of Bavarian authors recorded between Sep. 17th  and Oct. 7th. for the highest sentiment per user with an average error of 4.4 percentage points. This is done to emulate the voting intent. We assume, that the voting intent can be better emulated, when we filter out below average sentiment.
 
-On average removing the time period of the affair reduces the average error from 9 to 5 percentage points. Comparing the posts by Bavarian to other German authors, we only slightly decrease the error. In the end, the frequency based approach favour parties with higher post frequencies `FW`.
+Removing the time period of the Aiwanger affair reduces the average error from 9 to 5 percentage points. Comparing the posts of Bavarians to other German authors, we only slightly decrease the error.
 
-Considering the sentiment based method we can see, that the weekly sentiment for the parties `CSU`, `FW` and `AFD` are very similar in the region above 0.25 to 0.35. This is also true for the other parties as `SPD`. The sentiment for the `Buendis 90 / Gruene` is 0.1 higher. 
-Filtering by the most positive mentioned party per author, did not lead to better results. We assume, that while not all parties are mentioned per user, the true vote intent is still partially hidden, as we might select a neutral post, or the least negative mentioned party instead.
+Considering the sentiment based method we can see, that the weekly sentiment for the parties `CSU`, `FW` and `AFD` is very similar. This is also true for the other parties like `SPD`. The sentiment for the `Buendis 90 / Gruene` is slightly higher.
+Filtering by the most positively mentioned party per author, reduces the error slightly. We assume, that while not all parties are mentioned by each user, the true vote intent is still partially hidden. Therefore, we might select the least negative mentioned party instead.
 
 The [language selection model](https://huggingface.co/papluca/xlm-roberta-base-language-detection) lists a F1-score of 0.967 for German and 1.000 for English. The [German language Sentiment model](https://huggingface.co/oliverguhr/german-sentiment-bert) lists an overall F1-micro score of 0.9639.  The [English language Sentiment model](https://arxiv.org/abs/2106.09462) lists an F1-score of 0.72.
 Still, the models can not detect sarcasm, as this needs a lot of background knowledge and is considered a different task in the field of [text mining](https://arxiv.org/abs/2106.09462).
 
-About 10 % of all kept posts, where label as Bavarian. We do not know, whether this is due to lower number of Bavarian, who use Mastodon, or whether they use generalised instances, thus we could not estimate as Bavarian users. We tried to mitigate this problem with the self-disclosure in user fields and user texts. We did not try to classify the user by there language usage. The best result, was based on the polling data. The average of the polls of the last six weeks, before for the election. Resulted into very small error, of 0.39 percentage points per party.
-Similar results could be achieved by a fit of the polls of each party versus the sentiment analysis. The dependency of the poll result from the Sentiment was small. It has to be tested, whether this effect can be repeated for other elections.
+About 10 % of all kept posts were labeled as Bavarian. We do not know, whether this is due to lower number of Bavarian people, who use Mastodon, or whether they use generalised instances, so that we could not destingish them as Bavarian users. We tried to mitigate this problem with the self-disclosure in user fields and user texts. We did not try to classify the users by their language usage.
+
+The best result was based on the polling data. The average of the polls of the last six weeks before the election resulted into very small error of 0.39 percentage points per party.
+Similar results could be achieved by a fit of the polls of each party versus the sentiment analysis. The dependency of the poll result from the sentiment was small. It has to be tested, whether this effect can be repeated for other elections.
 
 ## Conclusion
 
-The frequencies analysis has been increased, by filtering early (Aiwanger affair) and late posts and only keep the most positive post per user. The which reduced the error to 4.4 percentage points. To better emulate voting intent, we would need to further filter out negative posts. We propose, to reduce the error by finding the best cut-of at which sentiments are considered too negative.
+The frequency analysis has been enhanced by filtering early (Aiwanger affair) and late posts and only keeping the most positive post per user. That reduced the error to 4.4 percentage points. To better emulate voting intent, we would need to further filter out negative posts. We propose to reduce the error by finding the best cut-of at which sentiments are considered too negative.
 
 We see strong problem for using Mastodon as a basis for polling (regional) elections.
 We assume, that for national elections Mastodon might be a better data source.
-The number of toots in the Bavarian state election 2023 was relatively low. We only got a high number of posts during the Aiwanger affair, which in turn added a bias the frequencies for each party.
+The number of toots in the Bavarian state election 2023 was relatively low. We only got a high number of posts during the Aiwanger affair, which in turn added a bias to the frequencies for all partys.
 
-In addition we assume, that the user base is not representative is for the socio-demographics of Germany or any German state. We therefore propose a two layered
-strategy to mitigate this, by applying a weighted average of the user data.
-We propose, that gender, can be extracted from user data, as user name, user fields and user texts. For users, that do not share this information we propose an image classification.
-Similar we propose an image classification to retrieve the age of the users. For images with no person or multiple persons, we assume an random gender and
-a random age (drown from the image/user statistic). Some models for the age an gender classification are listed [here](https://paperswithcode.com/sota/age-and-gender-classification-on-adience) and also in the [ONNX model zoo](https://github.com/onnx/models/tree/main/vision/body_analysis/age_gender).
+In addition we assume, that the user base is not representative for the socio-demographics of Germany or any German state. We therefore propose a two layered
+strategy to mitigate this by applying a weighted average of the user data.
+We propose that gender can be extracted from user data, like user name, user fields and user texts. For users, that do not share this information we propose an image classification.
+Similar we propose an image classification to retrieve the age of the users. For images with no person or multiple persons, we assume a random gender and
+a random age (drawn from the image/user distribution). Some models for the age a gender classification are listed [here](https://paperswithcode.com/sota/age-and-gender-classification-on-adience) and also in the [ONNX model zoo](https://github.com/onnx/models/tree/main/vision/body_analysis/age_gender).
 We than could compare the demographics to the [Bavarian Census](https://www.statistik.bayern.de/mam/produkte/veroffentlichungen/statistische_berichte/a1310c_202200.pdf).
 
 ### Appendix
@@ -377,9 +377,9 @@ We than could compare the demographics to the [Bavarian Census](https://www.stat
 - mastodon.dachgau.social
 - sueden.social
 
-sueden.social is a more general instance for southern Germany, but we assume, that the overlapping and regional proximity, lead to a similar sentiment. 
+sueden.social is a more general instance for southern Germany, but we assume, that the overlapping and regional proximity lead to a similar sentiment.
 
-#### List of Keywords in Table fields, that transcode locations
+#### List of Keywords in Table Fields, that Transcode Locations
 
 Following keys are used for the user fields:
 
@@ -406,12 +406,12 @@ Following keys are used for the user fields:
 
 #### Monitoring Interruptions
 
-The monitoring service was interrupted on Sep. 30th 2023 for about 20 hours,  on Oct. 7th 2023 for the update. A longer interruption took place from Oct. 28th to 31th and lasted about 85 hours.
+The monitoring service was interrupted on Sep. 30th 2023 for about 20 hours and on Oct. 7th 2023 for the update. A longer interruption took place from Oct. 28th to 31th and lasted about 85 hours.
 
 #### Tech stack
 
-Saving Mastodon data into a SQLite database is done with a Elixir project with mix.
+Saving Mastodon data into a SQLite database is done with an Elixir project with mix.
 The Mastodon api is called with HTTPoison. Ecto applied to write the reply into a SQLite3 database. Cron is utilised to hourly trigger the api calls with Quantum.
 
-The data evaluation is done with the Nx framework. The first version of Nx was released 01/06/2022. Nx enables the numerical computation in Elixir and is used for Machine Learning (Scholar) and Deep Learning libraries (Axon). For instance with an EXLA compiler as backed.
-The packages are still in development and sometimes, new functions and fixes, were just released during the project. For instance the week_of_year function was created for [this project](https://elixirforum.com/t/missing-functions-in-explorer-dataframes-series/58448/6).
+The data evaluation is done with the Nx framework. The first version of Nx was released 01/06/2022. Nx enables the numerical computation in Elixir and is used for Machine Learning (Scholar) and Deep Learning libraries (Axon), for instance with the EXLA compiler as backed.
+The packages are still in development and sometimes new functions and fixes were just released during the project. For instance the week_of_year function was created for this.
