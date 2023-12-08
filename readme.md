@@ -351,9 +351,11 @@ Similar results could be achieved by a fit of the polls of each party versus the
 
 ## Conclusion
 
+The frequencies analysis has been increased, by filtering early (Aiwanger affair) and late posts and only keep the most positive post per user. The which reduced the error to 4.4 percentage points. To better emulate voting intent, we would need to further filter out negative posts. We propose, to reduce the error by finding the best cut-of at which sentiments are considered too negative.
+
 We see strong problem for using Mastodon as a basis for polling (regional) elections.
 We assume, that for national elections Mastodon might be a better data source.
-The number of toots in regional election was relatively low. We only got a high number of posts during the Aiwanger affair, which in turn added a bias the frequencies for each party.
+The number of toots in the Bavarian state election 2023 was relatively low. We only got a high number of posts during the Aiwanger affair, which in turn added a bias the frequencies for each party.
 
 In addition we assume, that the user base is not representative is for the socio-demographics of Germany or any German state. We therefore propose a two layered
 strategy to mitigate this, by applying a weighted average of the user data.
