@@ -737,7 +737,8 @@ DF.print(persons_with_bavarian_fields)
 ```elixir
 person_from_bavaria = DF.filter(persons_with_bavarian_fields, bavarian_users == true)
 
-elem(DF.shape(person_from_bavaria), 0) / elem(DF.shape(persons_with_bavarian_fields), 0) * 100
+bavarian_count = elem(DF.shape(person_from_bavaria), 0)
+{bavarian_count, bavarian_count / elem(DF.shape(persons_with_bavarian_fields), 0) * 100}
 ```
 
 About 8.14 % of the sample datasets users are estimated to be from Bavarian.
@@ -1240,6 +1241,10 @@ bav_ger_toots =
   |> DF.filter(region != "en")
 
 DF.print(ger_eng_toots)
+```
+
+```elixir
+S.frequencies(bav_ger_toots["region"])
 ```
 
 ```elixir
