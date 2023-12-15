@@ -2047,6 +2047,7 @@ party_sentiment_offset.(filled_sentiment_weeks, filled_poll_weeks, "linke") |> d
 
 ```elixir
 alias Scholar.Linear.LinearRegression, as: LR
+alias Scholar.Linear.RidgeRegression, as: Ridge
 alias Scholar.Metrics.Regression, as: RegMetrics
 alias Scholar.Preprocessing
 ```
@@ -2160,7 +2161,31 @@ Summary:
 
 * sentiment:  0.003
 
-<!-- livebook:{"break_markdown":true} -->
+```elixir
+defmodule GridSearch do
+  def ridge_single(point, x_train, x_test, y_train, y_test) do
+    model_ridge = Ridge.fit(x_train, y_train, fit_intercept?: false, alpha: point)
+    y_hat_ridge = Ridge.predict(model_ridge, x_test)
+    Nx.to_number(RegMetrics.r2_score(y_test, y_hat_ridge))
+  end
+
+  def ridge_1d(points, x_train, x_test, y_train, y_test)
+      when is_list(points) do
+    points
+    |> Enum.map(&ridge_single(&1, x_train, x_test, y_train, y_test))
+  end
+end
+```
+
+```elixir
+GridSearch.ridge_1d([0, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0], x_train, x_test, y_train, y_test)
+```
+
+```elixir
+model_ridge = Ridge.fit(x_train, y_train, fit_intercept?: false, alpha: 0.1) |> dbg
+y_hat_ridge = Ridge.predict(model_ridge, x_test)
+Nx.to_number(RegMetrics.r2_score(y_test, y_hat_ridge))
+```
 
 ### Compare with average of that time frame
 
