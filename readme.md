@@ -18,7 +18,7 @@ I held a presentation on this project on Elixir MeetUp Berlin on Feb 8th, 2024. 
 This repository does not contain the selected data.
 
 The Livebook code can be found [here](election_bavaria.livemd).
-The code for data collection can be found [here](.\mastodon)
+The code for data collection can be found [here](./mastodon).
 
 [TOC]
 
@@ -97,6 +97,7 @@ Following tags are monitored on the instance *chaos.social*. We group the tags b
 | Election   | wahlen, wahlkampf,  wahlumfrage, wahlen23, wahlen2023                                                   |
 | Partys     | spd, csu, gruene,  grune, gruenen, grunen, afd, freiewaehler, freiewahler, fw, fpd, linke               |
 | Candidates | markussoeder, markussoder, soeder, soder, hubertaiwanger, aiwanger, hartmann, martinhagen, ebnersteiner |
+
 </div>
 
 Some candidates were not included, because their names were not used as tags at the beginning of the study. We only used German words as tags.
@@ -306,6 +307,7 @@ In the *full-sample* 307 users (3.88 % percent) are from Bavaria: 2.68 % percent
 | With dominant Party | 2627       | 5763        |
 | Bavarian Posts      | 249        | 549         |
 | Other German Posts  | 2255       | 4921        |
+
 </div
 
 After filtering for dominant parties, we still have posts in other languages. Finally, we filter posts that are older than the starting date of this study. After filtering these we get the count of Bavaria and other German regions.
@@ -395,6 +397,7 @@ of all posts weighted by the count of followers of each author. Finally, we also
 | Gruene | 3.0 %      | 1.2 %                | 1.8 %              | 14.4 %          |
 | Linke  | 1.3 %      | 1.7 %                | 1.8 %              | 1.5 %           |
 | SPD    | 3.7 %      | 4.1 %                | 2.1 %              | 8.4 %           |
+
 </div>
 
 These percentages are 30 percent points too high for `Freie Waehler`.
@@ -628,6 +631,7 @@ The values for the user fields concerning gender/sexuality are grouped by sex in
 | -------- | -------------------------------- |
 | Male     | he, him, his, er, ihm, ihn, sein |
 | Female   | she, her, sie, ihr               |
+
 </div>
 
 ### List of Bavarian Instances
