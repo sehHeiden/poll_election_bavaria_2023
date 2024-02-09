@@ -13,6 +13,13 @@ By Sebastian Heiden. <br>
 
 Released: 15.12.23. <br><br>
 
+I held a presentation on this project on Elixir MeetUp Berlin on Feb 8th, 2024. The slides can be found [here](https://github.com/sehHeiden/MeetUpElixir/blob/main/presentation_MastodonElection.pdf).
+
+This repository does not contain the selected data.
+
+The Livebook code can be found [here](election_bavaria.livemd).
+The code for data collection can be found [here](.\mastodon)
+
 [TOC]
 
 <div style="page-break-after: always;"></div>
