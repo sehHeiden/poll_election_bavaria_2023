@@ -20,6 +20,8 @@ This repository does not contain the selected data.
 The Livebook code can be found [here](election_bavaria.livemd).
 The code for data collection can be found [here](./mastodon).
 
+Some addiotional work (Wordcloud and Topics (LDA)) can be found in an extra [notebook](https://github.com/sehHeiden/Analyse_von_Finanzdaten/tree/master).
+
 [TOC]
 
 <div style="page-break-after: always;"></div>
